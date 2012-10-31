@@ -16,6 +16,7 @@ module Vodki.Sink (
     -- * Opaque
       Sink
     , Console
+    , Graphite
 
     -- * Functions
     , emit
@@ -23,6 +24,7 @@ module Vodki.Sink (
 
     -- * Sink Constructors
     , sinkStdout
+    , sinkGraphite
     ) where
 
 import Control.Monad
@@ -49,7 +51,15 @@ sinkStdout :: Sink
 sinkStdout = Sink Console
 
 instance Emit Console where
-    emit _ = BS.putStrLn
+    emit _ = BS.putStrLn . BS.append "Console: "
+
+data Graphite = Graphite
+
+sinkGraphite :: Sink
+sinkGraphite = Sink Graphite
+
+instance Emit Graphite where
+    emit _ = BS.putStrLn . BS.append "Graphite: "
 
 -- tcpHandle :: String -> Int -> IO Handle
 -- tcpHandle host port = do
