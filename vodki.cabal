@@ -48,5 +48,6 @@ executable vodki
                   , network
                   , regex-pcre
                   , stm
+                  , split-channel
                   , time
                   , transformers

@@ -11,92 +11,75 @@
 --
 
 module Vodki.Vodki (
-    -- * Monad
+    -- * ReaderT
       Vodki
+    , runVodki
 
     -- * Functions
-    , runVodki
-    , store
+    , insert
     ) where
 
 import Control.Applicative
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Reader
-import Vodki.Sink
-import Vodki.Metric
-import Vodki.Store
+import Control.Concurrent
+import Control.Concurrent.STM
+import Data.Maybe             (fromJust)
+import Data.Time.Clock.POSIX
+import Vodki.Types
 
-import qualified Data.ByteString.Char8 as BS
+import qualified Control.Concurrent.Chan.Split as C
+import qualified Data.ByteString.Char8         as BS
+import qualified Data.Map                      as M
 
-class (Monad m, MonadIO m, MonadPlus m) => MonadVodki m where
-    liftVodki :: Vodki a -> m a
-
-data VodkiState = VodkiState
-    { _received :: BS.ByteString -> IO ()
-    , _counters :: Store Counter
-    , _timers   :: Store Timer
-    , _gauges   :: Store Gauge
-    , _sets     :: Store Set
+data Store = Store
+    { delay :: Int
+    , sink  :: Sink
+    , tvar  :: TVar (M.Map Key (TVar Metric))
     }
 
-newtype Vodki a = Vodki
-    { unVodki :: ReaderT VodkiState IO (Maybe a)
-    }
+type Vodki a = ReaderT Store IO a
 
-instance Monad Vodki where
-    return          = Vodki . return . Just
-    fail _          = Vodki $ return Nothing
-    (Vodki m) >>= f = Vodki $ do
-        r <- m
-        case r of
-            Just v  -> unVodki $! f v
-            Nothing -> return Nothing
+runVodki :: Int -> Vodki a -> IO a
+runVodki n vodki = do
+    s <- Store n <$> C.newSendPort <*> (atomically $ newTVar M.empty)
+    runReaderT vodki s
 
-instance MonadIO Vodki where
-    liftIO m = Vodki $! liftM Just $! liftIO m
-
-instance MonadPlus Vodki where
-    mzero       = Vodki $ return Nothing
-    a `mplus` b = Vodki $ do
-        r <- unVodki a
-        case r of
-            Just _  -> return r
-            Nothing -> unVodki b
-
-instance MonadVodki Vodki where
-    liftVodki = id
-
-runVodki :: [Sink] -> Int -> [Sink] -> Vodki a -> IO ()
-runVodki pre secs post (Vodki m) = do
-    ss <- VodkiState
-          (emitAll pre)
-          <$> f (g post)
-          <*> f (g post)
-          <*> f (g post)
-          <*> f (g post)
-    _  <- runReaderT m ss
-    return ()
- where
-   f = newStore secs
-   g sinks k v ts n = mapM_ (flip emit $ encode k v ts n) sinks
-
-store :: MonadVodki m => BS.ByteString -> m ()
-store bstr = forM_ (split bstr) bucket
+insert :: BS.ByteString -> Vodki ()
+insert bstr = do
+    s@Store{..} <- ask
+    liftIO $ do
+        C.send sink $ Insert bstr
+        forM_ (filter (not . BS.null) $ BS.lines bstr) (parse s)
   where
-    split = filter (not . BS.null) . BS.lines
+    parse s b = case decode b of
+        Just (k, v) -> bucket s k v
+        Nothing     -> C.send (sink s) $ Invalid b
 
-bucket :: MonadVodki m => BS.ByteString -> m ()
-bucket bstr = msum [f _counters, f _timers, f _gauges, f _sets]
+bucket :: Store -> Key -> Metric -> IO ()
+bucket s@Store{..} key val = do
+    C.send sink $ Bucket key val
+    m <- readTVarIO tvar
+    case M.lookup key m of
+        Just v  -> atomically $ modifyTVar' v (append val)
+        Nothing -> do
+            atomically $ do
+                v <- newTVar val
+                writeTVar tvar $! M.insert key v m
+            flush s key
+
+flush :: Store -> Key -> IO ()
+flush s@Store{..} key = void . forkIO $ do
+    threadDelay n
+    v  <- delete s key
+    ts <- getPOSIXTime
+    C.send sink $ Flush key v ts delay
   where
-    f g = case decode bstr of
-        Just (k, m) -> do
-            h <- state _received
-            s <- state g
-            liftIO $ do
-                h bstr
-                insert s k m
-        Nothing ->
-            fail "Failed to parse"
+    n = delay * 1000000
 
-state :: MonadVodki m => (VodkiState -> a) -> m a
-state f = liftVodki $ f `liftM` (Vodki $ liftM Just ask)
+delete :: Store -> Key -> IO Metric
+delete Store{..} key = atomically $ do
+    m <- readTVar tvar
+    writeTVar tvar $! M.delete key m
+    readTVar (fromJust $ M.lookup key m)

@@ -17,21 +17,20 @@ module Main (
 
 import Control.Monad          (forever)
 import Control.Monad.IO.Class (liftIO)
-import Vodki.Sink
+import Vodki.Vodki
 import Vodki.Config
 import Vodki.Network
-import Vodki.Vodki
 
 main :: IO ()
 main = do
     putStrLn "Starting..."
-    conf@Config{..} <- getConfig
-    putStr $ show conf
+    c@Config{..} <- getConfig
+    putStr $ show c
 
     s <- listen _listenPort
     putStrLn "Listening..."
 
-    runVodki [sinkStdout] _flushInterval [sinkStdout] (receive s)
+    runVodki _flushInterval (receive s)
 
 listen :: Int -> IO Socket
 listen port = do
@@ -42,4 +41,4 @@ listen port = do
 receive :: Socket -> Vodki ()
 receive sock = forever $ do
     b <- liftIO $ recv sock 1024
-    store b
+    insert b
