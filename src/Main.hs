@@ -20,7 +20,6 @@ import Control.Monad.IO.Class
 import Vodki.Config
 import Vodki.Network
 import Vodki.Types
-import Vodki.Vodki
 
 main :: IO ()
 main = do
