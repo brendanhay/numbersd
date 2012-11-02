@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ExistentialQuantification, TupleSections #-}
 
 -- |
 -- Module      : Vodki.Types
@@ -36,12 +36,6 @@ data Metric = Counter Double
 newtype Key = Key { getKey :: BS.ByteString }
     deriving (Eq, Ord, Show)
 
-data Event = Insert BS.ByteString
-           | Invalid BS.ByteString
-           | Bucket Key Metric
-           | Flush Key Metric POSIXTime Int
-             deriving (Eq, Ord, Show)
-
 decode :: BS.ByteString -> Maybe (Key, Metric)
 decode bstr = maybeResult $ feed (parse parser bstr) ""
 
@@ -68,3 +62,44 @@ append (Set x)     (Set y)     = Set $ x `S.union` y
 append _           right       = right
 -- ^ Last written (flushed) wins, same as graphite
 -- should return Either (succ, fail) succ ?
+
+data Event = Insert BS.ByteString
+           | Invalid BS.ByteString
+           | Bucket Key Metric
+           | Flush Key Metric POSIXTime Int
+             deriving (Eq, Ord, Show)
+
+class Sink a where
+    emit :: a -> Event -> IO ()
+
+data AnySink = forall a. Sink a => Sink a
+
+instance Sink AnySink where
+    emit (Sink s) = emit s
+
+data Debug = Debug
+
+debug :: AnySink
+debug = Sink Debug
+
+instance Sink Debug where
+    emit _ (Bucket k v) = putStrLn $ "Debug: " ++ show k ++ " " ++ show v
+    emit _ _ = return ()
+
+data Repeater = Repeater
+
+repeater :: AnySink
+repeater = Sink Repeater
+
+instance Sink Repeater where
+    emit _ (Insert s) = putStrLn $ "Repeater: " ++ BS.unpack s
+    emit _ _ = return ()
+
+data Graphite = Graphite
+
+graphite :: AnySink
+graphite = Sink Graphite
+
+instance Sink Graphite where
+    emit _ (Flush k v ts n) = putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+    emit _ _ = return ()

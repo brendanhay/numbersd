@@ -18,10 +18,6 @@ module Vodki.Vodki (
     , runVodki
     , attachSink
     , storeMetric
-
-    , Debug(..)
-    , Repeater(..)
-    , Graphite(..)
     ) where
 
 import Control.Applicative
@@ -38,27 +34,6 @@ import qualified Control.Concurrent.Chan.Split as C
 import qualified Data.ByteString.Char8         as BS
 import qualified Data.Map                      as M
 
-class Sink a where
-    emit :: a -> Event -> IO ()
-
-data Debug = Debug
-
-instance Sink Debug where
-    emit _ (Bucket k v) = putStrLn $ "Debug: " ++ show k ++ " " ++ show v
-    emit _ _ = return ()
-
-data Repeater = Repeater
-
-instance Sink Repeater where
-    emit _ (Insert s) = putStrLn $ "Repeater: " ++ BS.unpack s
-    emit _ _ = return ()
-
-data Graphite = Graphite
-
-instance Sink Graphite where
-    emit _ (Flush k v ts n) = putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
-    emit _ _ = return ()
-
 data Store = Store
     { delay  :: Int
     , events :: C.SendPort Event
@@ -71,12 +46,6 @@ runVodki :: Int -> Vodki a -> IO a
 runVodki n vodki = do
     s <- Store n <$> C.newSendPort <*> atomically (newTVar M.empty)
     runReaderT vodki s
-
-attachSink :: Sink a => a -> Vodki ()
-attachSink sink = do
-    Store{..} <- ask
-    source <- liftIO $ C.listen events
-    liftIO . void . forkIO . forever $ C.receive source >>= emit sink
 
 storeMetric :: BS.ByteString -> Vodki ()
 storeMetric bstr = ask >>= liftIO . flip insert bstr
