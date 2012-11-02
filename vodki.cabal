@@ -47,6 +47,7 @@ executable vodki
                   , mtl
                   , network
                   , regex-pcre
+                  , setters
                   , stm
                   , time
                   , transformers

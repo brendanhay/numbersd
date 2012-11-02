@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Vodki.Sink
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -11,18 +13,24 @@
 --
 
 module Vodki.Sink (
+    -- * Event Type
       Event(..)
 
     -- * Opaque
     , Sink
     , emit
-    , debugSink
+
+    -- * Sinks
+    , dumpMessages
+    , repeater
+    , graphite
     ) where
 
 import Control.Applicative        hiding (empty)
 import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
+import Data.Setters
 import Data.Time.Clock.POSIX
 import Vodki.Metric
 
@@ -41,15 +49,18 @@ data Sink = Sink
     , events  :: TQueue Event
     }
 
+$(declareSetters ''Sink)
+
 newSink :: IO Sink
 newSink = Sink f f (\_ _ -> return ()) (\_ _ _ _ -> return ())
     <$> atomically newTQueue
   where
     f _ = return ()
 
-runSink :: Sink -> IO Sink
-runSink s@Sink{..} = do
-    _ <- forkIO . forever $ do
+runSink :: (Sink -> Sink) -> IO Sink
+runSink f = do
+    s@Sink{..} <- f <$> newSink
+    void . forkIO . forever $ do
         e <- atomically $ readTQueue events
         case e of
             (Receive bs)     -> receive bs
@@ -61,9 +72,14 @@ runSink s@Sink{..} = do
 emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
 
-debugSink :: IO Sink
-debugSink = do
-    s <- newSink
-    runSink $ s { parse = parse' }
-  where
-    parse' k v = putStrLn $ "Debug: " ++ show k ++ " " ++ show v
+dumpMessages :: IO Sink
+dumpMessages = runSink . setParse $ \k v ->
+    putStrLn $ "Dump: " ++ show k ++ " " ++ show v
+
+repeater :: IO Sink
+repeater = runSink . setReceive $ \s ->
+    putStrLn $ "Repeat: " ++ BS.unpack s
+
+graphite :: IO Sink
+graphite = runSink . setFlush $ \k v ts _ ->
+    putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts

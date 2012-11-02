@@ -24,17 +24,17 @@ import Vodki.Vodki
 
 main :: IO ()
 main = do
-    putStrLn "Starting..."
-    c@Config{..} <- getConfig
-    putStr $ show c
+    putStrLn "Parsing config..."
+    conf@Config{..} <- getConfig
+    putStr $ show conf
 
-    s <- listen _listenPort
+    sinks <- sequence [dumpMessages, repeater, graphite]
+    putStrLn "Sinks started..."
+
+    sock <- listen _listenPort
     putStrLn "Listening..."
 
-    d <- debugSink
-
-    runVodki _flushInterval [d] $ do
-        receive s
+    runVodki _flushInterval sinks $ receive sock
 
 listen :: Int -> IO Socket
 listen port = do
