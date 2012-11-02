@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification, FunctionalDependencies #-}
 
 -- |
 -- Module      : Vodki.Sink
@@ -12,54 +12,68 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Sink (
-    -- * Opaque
-      Sink
-    , Console
-    , Graphite
+module Vodki.Sink where -- (
+    -- -- * Existential Type and Constructor Wrappers
+    --   Aggr
+    -- , Raw
 
-    -- * Functions
-    , emit
-    , emitAll
+    -- -- * Opaque
+    -- , Console
+    -- , Graphite
 
-    -- * Sink Constructors
-    , sinkStdout
-    , sinkGraphite
-    ) where
+    -- -- * Functions
+    -- , aggr
+    -- , raw
+
+    -- -- * Sink Constructors
+    -- , consoleRaw
+    -- , consoleAggr
+    -- , graphiteAggr
+    -- ) where
 
 import Control.Monad
-import Network.Socket hiding (connect)
-import Vodki.Network
+import Data.Time.Clock.POSIX
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Network.Socket        as S
+import qualified Control.Concurrent.Chan.Split as C
+import qualified Data.ByteString.Char8         as BS
 
-class Emit a where
-    emit :: a -> BS.ByteString -> IO ()
+-- class AggrSink a where
+--     aggr :: (Show b, Metric b) => a -> Flush b -> IO ()
 
-data Sink = forall a. Emit a => Sink a
+-- data Aggr = forall a. AggrSink a => Aggr a
 
-emitAll :: [Sink] -> BS.ByteString -> IO ()
-emitAll sinks bstr = mapM_ (`emit` bstr) sinks
+-- instance AggrSink Aggr where
+--     aggr (Aggr s) = aggr s
 
-instance Emit Sink where
-    emit (Sink s) = emit s
+-- class RawSink a where
+--     raw  :: a -> BS.ByteString -> IO ()
 
-data Console = Console
+-- data Raw = forall a. RawSink a => Raw a
 
-sinkStdout :: Sink
-sinkStdout = Sink Console
+-- instance RawSink Raw where
+--     raw (Raw s) = raw s
 
-instance Emit Console where
-    emit _ = BS.putStrLn . BS.append "Console: "
+-- data Console = Console
 
-data Graphite = Graphite
+-- instance AggrSink Console where
+--     aggr _ Flush{..} = putStrLn $ "Console: " ++ show _value
 
-sinkGraphite :: Sink
-sinkGraphite = Sink Graphite
+-- instance RawSink Console where
+--     raw _  = BS.putStrLn . BS.append "Console: "
 
-instance Emit Graphite where
-    emit _ = BS.putStrLn . BS.append "Graphite: "
+-- consoleRaw :: Raw
+-- consoleRaw = Raw Console
+
+-- consoleAggr :: Aggr
+-- consoleAggr = Aggr Console
+
+-- data Graphite = Graphite
+
+-- instance AggrSink Graphite where
+--     aggr _ Flush{..} = putStrLn $ "Graphite: " ++ show _value
+
+-- graphiteAggr :: Aggr
+-- graphiteAggr = Aggr Graphite
 
 -- tcpHandle :: String -> Int -> IO Handle
 -- tcpHandle host port = do

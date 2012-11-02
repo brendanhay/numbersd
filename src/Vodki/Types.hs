@@ -19,13 +19,13 @@ import Control.Monad                     (liftM)
 import Data.Attoparsec.ByteString
 import Data.Monoid                       (mappend)
 import Data.Time.Clock.POSIX
-import Vodki.Sink
 import Vodki.Regex
 
 import qualified Control.Concurrent.Chan.Split as C
 import qualified Data.Attoparsec.Char8         as PC
 import qualified Data.ByteString.Char8         as BS
 import qualified Data.Set                      as S
+import qualified Network.Socket                as S
 
 data Metric = Counter Double
             | Timer [Double]
@@ -41,9 +41,6 @@ data Event = Insert BS.ByteString
            | Bucket Key Metric
            | Flush Key Metric POSIXTime Int
              deriving (Eq, Ord, Show)
-
-type Sink   = C.SendPort Event
-type Source = C.ReceivePort Event
 
 decode :: BS.ByteString -> Maybe (Key, Metric)
 decode bstr = maybeResult $ feed (parse parser bstr) ""
@@ -69,4 +66,5 @@ append (Timer x)   (Timer y)   = Timer $ x ++ y
 append (Gauge _) g@(Gauge _)   = g
 append (Set x)     (Set y)     = Set $ x `S.union` y
 append _           right       = right
--- ^ Last written (flushed) wins, same as statsd
+-- ^ Last written (flushed) wins, same as graphite
+-- should return Either (succ, fail) succ ?

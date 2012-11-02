@@ -15,8 +15,8 @@ module Main (
       main
     ) where
 
-import Control.Monad          (forever)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad
+import Control.Monad.IO.Class
 import Vodki.Vodki
 import Vodki.Config
 import Vodki.Network
@@ -30,7 +30,11 @@ main = do
     s <- listen _listenPort
     putStrLn "Listening..."
 
-    runVodki _flushInterval (receive s)
+    runVodki _flushInterval $ do
+        attachSink Debug
+        attachSink Repeater
+        attachSink Graphite
+        receive s
 
 listen :: Int -> IO Socket
 listen port = do
@@ -41,4 +45,4 @@ listen port = do
 receive :: Socket -> Vodki ()
 receive sock = forever $ do
     b <- liftIO $ recv sock 1024
-    insert b
+    storeMetric b
