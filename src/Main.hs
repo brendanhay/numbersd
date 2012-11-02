@@ -19,7 +19,8 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Vodki.Config
 import Vodki.Network
-import Vodki.Types
+import Vodki.Sink
+import Vodki.Vodki
 
 main :: IO ()
 main = do
@@ -30,10 +31,9 @@ main = do
     s <- listen _listenPort
     putStrLn "Listening..."
 
-    let sinks = [debug, repeater, graphite]
+    d <- debugSink
 
-    runVodki _flushInterval $ do
-        forM_ sinks attachSink
+    runVodki _flushInterval [d] $ do
         receive s
 
 listen :: Int -> IO Socket
