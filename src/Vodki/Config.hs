@@ -19,13 +19,13 @@ module Vodki.Config (
     ) where
 
 import Control.Applicative
-import Control.Monad          (liftM, unless)
+import Control.Monad          (liftM)
 import Data.Aeson
 import Data.Version           (showVersion)
 import Paths_vodki            (version)
 import System.Console.CmdArgs
 import System.Directory       (doesFileExist)
-import System.Environment     (getProgName)
+import System.Environment
 import Vodki.Regex
 
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -35,13 +35,19 @@ data Options = Options
     } deriving (Data, Typeable)
 
 defaultOptions :: Options
-defaultOptions = Options
-    { _config = "./vodki.json"
-        &= name "config"
-        &= typ  "PATH"
-        &= help "json configuration file, default ./vodki.json"
-        &= explicit
-    }
+defaultOptions = Options { _config = "" &= typ "CONFIG" &= argPos 0 }
+
+parseOptions :: IO Options
+parseOptions = do
+    app <- getProgName
+    wrap . cmdArgs $ defaultOptions
+        &= versionArg [explicit, name "version", name "v", ver app]
+        &= summary ""
+        &= helpArg [explicit, name "help", name "h"]
+        &= program ("Usage: " ++ app)
+  where
+    ver s  = summary $ concat [s, ": ", showVersion version]
+    wrap f = getArgs >>= \a -> if null a then withArgs ["-h"] f else f
 
 data Config = Config
     { _listenPort       :: Int
@@ -101,22 +107,14 @@ instance FromJSON Config where
         Config{..} = defaultConfig
     parseJSON _ = empty
 
-parseOptions :: IO Options
-parseOptions = do
-    app <- getProgName
-    let ver = summary $ concat [app, ": ", showVersion version]
-    cmdArgs $ defaultOptions
-        &= versionArg [explicit, name "version", name "v", ver]
-        &= summary ""
-        &= helpArg [explicit, name "help", name "h"]
-        &= program ("Usage: " ++ app)
-
 getConfig :: IO Config
 getConfig = do
     (Options f) <- parseOptions
     p <- doesFileExist f
-    unless p (error $ "No configuration file not found at " ++ f)
+    if p
+     then putStrLn $ "Parsing " ++ f
+     else error $ "No configuration file not found at " ++ f
     s <- replace (comments "") `liftM` BL.readFile f
     maybe (error $ "Invalid json in the configuration file " ++ f)
-          return
+          (\c -> putStr (show c) >> return c)
           (decode' s :: Maybe Config)
