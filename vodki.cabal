@@ -27,12 +27,12 @@ executable vodki
 
   default-language: Haskell2010
   default-extensions:
-                    OverloadedStrings
-                  , DeriveDataTypeable
-                  , RecordWildCards
-                  , TypeSynonymInstances
+                    DeriveDataTypeable
                   , FlexibleInstances
                   , MultiParamTypeClasses
+                  , OverloadedStrings
+                  , RecordWildCards
+                  , TypeSynonymInstances
 
   ghc-options:      -Wall -rtsopts -threaded
   ghc-prof-options: -prof -fprof-auto -auto-all -with-rtsopts=-p
