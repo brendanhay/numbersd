@@ -33,7 +33,7 @@ data Metric = Counter Double
             | Set (S.Set Double)
               deriving (Eq, Ord, Show)
 
-newtype Key = Key { getKey :: BS.ByteString }
+newtype Key = Key BS.ByteString
     deriving (Eq, Ord, Show)
 
 append :: Metric -> Metric -> Metric
