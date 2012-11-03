@@ -30,25 +30,6 @@ import Vodki.Regex
 
 import qualified Data.ByteString.Lazy.Char8 as BL
 
-data Options = Options
-    { _config :: FilePath
-    } deriving (Data, Typeable)
-
-defaultOptions :: Options
-defaultOptions = Options { _config = "" &= typ "CONFIG" &= argPos 0 }
-
-parseOptions :: IO Options
-parseOptions = do
-    app <- getProgName
-    wrap . cmdArgs $ defaultOptions
-        &= versionArg [explicit, name "version", name "v", ver app]
-        &= summary ""
-        &= helpArg [explicit, name "help", name "h"]
-        &= program ("Usage: " ++ app)
-  where
-    ver s  = summary $ concat [s, ": ", showVersion version]
-    wrap f = getArgs >>= \a -> if null a then withArgs ["-h"] f else f
-
 data Config = Config
     { _listenPort       :: Int
     , _manageAddress    :: String
@@ -118,3 +99,22 @@ getConfig = do
     maybe (error $ "Invalid json in the configuration file " ++ f)
           (\c -> putStr (show c) >> return c)
           (decode' s :: Maybe Config)
+
+data Options = Options
+    { _config :: FilePath
+    } deriving (Data, Typeable)
+
+defaultOptions :: Options
+defaultOptions = Options { _config = "" &= typ "CONFIG" &= argPos 0 }
+
+parseOptions :: IO Options
+parseOptions = do
+    app <- getProgName
+    wrap . cmdArgs $ defaultOptions
+        &= versionArg [explicit, name "version", name "v", ver app]
+        &= summary ""
+        &= helpArg [explicit, name "help", name "h"]
+        &= program ("Usage: " ++ app)
+  where
+    ver s  = summary $ concat [s, ": ", showVersion version]
+    wrap f = getArgs >>= \a -> if null a then withArgs ["-h"] f else f
