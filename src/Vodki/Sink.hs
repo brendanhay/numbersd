@@ -51,6 +51,21 @@ data Sink = Sink
 
 $(declareSetters ''Sink)
 
+emit :: [Sink] -> Event -> IO ()
+emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
+
+dumpMessages :: IO Sink
+dumpMessages = runSink . setParse $ \k v ->
+    putStrLn $ "Dump: " ++ show k ++ " " ++ show v
+
+repeater :: String -> Int -> IO Sink
+repeater host port = runSink . setReceive $ \s ->
+    putStrLn $ "Repeat: " ++ BS.unpack s
+
+graphite :: String -> Int -> IO Sink
+graphite host port = runSink . setFlush $ \k v ts _ ->
+    putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+
 newSink :: IO Sink
 newSink = Sink f f (\_ _ -> return ()) (\_ _ _ _ -> return ())
     <$> atomically newTQueue
@@ -68,18 +83,3 @@ runSink f = do
             (Parse k v)      -> parse k v
             (Flush k v ts n) -> flush k v ts n
     return s
-
-emit :: [Sink] -> Event -> IO ()
-emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
-
-dumpMessages :: IO Sink
-dumpMessages = runSink . setParse $ \k v ->
-    putStrLn $ "Dump: " ++ show k ++ " " ++ show v
-
-repeater :: IO Sink
-repeater = runSink . setReceive $ \s ->
-    putStrLn $ "Repeat: " ++ BS.unpack s
-
-graphite :: IO Sink
-graphite = runSink . setFlush $ \k v ts _ ->
-    putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
