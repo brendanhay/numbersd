@@ -1,3 +1,4 @@
+
 Vodki
 =====
 
@@ -16,14 +17,10 @@ Install
 -------
 
 At present, it is assumed the user knows some of the Haskell eco system and
-in particular wrangling cabal-dev to obtain dependencies.
-
-I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
+in particular wrangling cabal-dev to obtain dependencies. I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
 
 You will need reasonably new versions of GHC and the Haskell Platform which
-you can obtain here: http://www.haskell.org/platform/
-
-Then run `make install` in the root directory to compile vodki.
+you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile vodki.
 
 
 <a name="running">
