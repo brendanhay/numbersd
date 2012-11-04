@@ -14,42 +14,64 @@
 
 module Vodki.Config (
     -- * Exported Types
-      Options(..)
+      Addr(..)
+    , Options(..)
 
     -- * Functions
     , parseOptions
     ) where
 
-import Control.Applicative
-import Control.Monad                   (liftM)
 import Data.Setters
+import Data.List.Split                 (splitOn)
 import Data.Version                    (showVersion)
 import Paths_vodki                     (version)
 import System.Console.CmdArgs.Explicit
-import System.Directory                (doesFileExist)
 import System.Environment
 import System.Exit
-import Vodki.Regex
 
-import qualified Data.ByteString.Lazy.Char8 as BL
+data Addr = Addr String Int
+
+instance Read Addr where
+    readsPrec _ a = do
+        (h, b)   <- lex a
+        (":", c) <- lex b
+        (p, d)   <- lex c
+        return (Addr h $ read p, d)
+
+instance Show Addr where
+    show (Addr h p) = h ++ ":" ++ show p
 
 data Options = Help | Version | Options
-    { server      :: String
-    , management  :: String
+    { server      :: Addr
+    , management  :: Addr
     , interval    :: Int
     , percentiles :: [Int]
-    , console     :: [String]
-    , graphite    :: [String]
+    , console     :: [Addr]
+    , graphite    :: [Addr]
     , repeater    :: [String]
     , statsd      :: [String]
-    } deriving (Show)
+    }
 
 $(declareSetters ''Options)
 
+instance Show Options where
+    show Options{..} = unlines
+        [ "Configuration: "
+        , " -> Server:         " ++ show server
+        , " -> Management:     " ++ show management
+        , " -> Flush Interval: " ++ show interval
+        , " -> Percentiles:    " ++ show percentiles
+        , " -> Console:        " ++ show console
+        , " -> Graphite:       " ++ show graphite
+        , " -> Repeater:       " ++ show repeater
+        , " -> Statsd:         " ++ show statsd
+        ]
+    show _ = ""
+
 defaultOptions :: Options
 defaultOptions = Options
-    { server      = "0.0.0.0:8125"
-    , management  = "0.0.0.0:8126"
+    { server      = Addr "0.0.0.0" 8125
+    , management  = Addr "0.0.0.0" 8126
     , interval    = 10
     , percentiles = [90]
     , console     = []
@@ -65,26 +87,27 @@ parseOptions = do
     case processValue (flags n) a of
         Help    -> print (helpText [] HelpFormatOne $ flags n) >> ok
         Version -> print (info n) >> ok
-        opts    -> return opts
+        opts    -> putStr (show opts) >> return opts
   where
     ok = exitWith ExitSuccess
 
 flags :: String -> Mode Options
-flags name = mode name defaultOptions "Vodki" err
-    [ flagReq ["server"] (upd setServer) "HOST:PORT" "server"
-    , flagReq ["management"] (upd setManagement) "HOST:PORT" "management"
-    , flagReq ["interval"] (upd setInterval . read) "SECONDS" "interval"
-    , flagReq ["percentiles"] (\_ o -> Right o) "[INT]" "percentiles"
-    , flagReq ["console"] (\_ o -> Right o) "[EVENT]" "where EVENT is a list of receive,invalid,parse,flush"
-    , flagReq ["graphite"] (\_ o -> Right o) "[HOST:PORT]" "graphite"
-    , flagReq ["repeater"] (\_ o -> Right o) "[HOST:PORT]" "repeater"
-    , flagReq ["statsd"] (\_ o -> Right o) "[HOST:PORT]" "statsd"
+flags name = mode name defaultOptions "Vodki"
+    (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
+    [ flagReq ["server"] (f setServer) "HOST:PORT" "server"
+    , flagReq ["management"] (f setManagement) "HOST:PORT" "management"
+    , flagReq ["interval"] (f setInterval) "SECONDS" "interval"
+    , flagReq ["percentiles"] (g setPercentiles) "[INT]" "percentiles"
+    , flagReq ["console"] (g setConsole) "[EVENT]" "where EVENT is a list of receive,invalid,parse,flush"
+    , flagReq ["graphite"] (g setGraphite) "[HOST:PORT]" "graphite"
+    , flagReq ["repeater"] (g setRepeater) "[HOST:PORT]" "repeater"
+    , flagReq ["statsd"] (g setStatsd) "[HOST:PORT]" "statsd"
     , flagNone ["help", "h"] (\_ -> Help) "Display this help message"
     , flagVersion $ \_ -> Version
     ]
   where
-    upd f s = Right . f s
-    err = flagArg (\x _ -> Left $ "Unexpected argument " ++ x) ""
+    f upd s = Right . upd (read s)
+    g upd s = Right . upd (map read $ splitOn "," s)
 
 info :: String -> String
 info name = concat
