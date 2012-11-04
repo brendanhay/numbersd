@@ -19,9 +19,10 @@ module Vodki.Metric (
     , decode
     ) where
 
+import Control.Arrow                     (first)
 import Control.Applicative        hiding (empty)
 import Data.Attoparsec.ByteString
-import Vodki.Regex
+import Text.Regex.PCRE            hiding (match)
 
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
@@ -59,4 +60,21 @@ parser = do
             's' -> Set $ S.singleton v
             _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- Div by zero
   where
-    strip s = foldl (flip replace) s unsafe'
+    strip s = foldl (flip $ uncurry replace) s unsafe
+
+unsafe :: [(Regex, BS.ByteString)]
+unsafe = map (first $ makeRegex . BS.pack)
+    [ ("\\s+", "_")
+    , ("\\/", "-")
+    , ("[^a-zA-Z_\\-0-9\\.]", "")
+    ]
+
+replace :: Regex -> BS.ByteString -> BS.ByteString -> BS.ByteString
+replace regex rep = go
+  where
+    go s = case match regex s of
+        Just (a, _, c) -> a `BS.append` rep `BS.append` go c
+        _              -> s
+
+match :: Regex -> BS.ByteString -> Maybe (BS.ByteString, BS.ByteString, BS.ByteString)
+match = matchM
