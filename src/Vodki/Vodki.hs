@@ -10,7 +10,11 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Vodki where
+module Vodki.Vodki (
+      Vodki
+    , runVodki
+    , storeMetric
+    ) where
 
 import Control.Applicative    hiding (empty)
 import Control.Monad
@@ -27,9 +31,9 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M
 
 data State = State
-    { delay :: Int
-    , sinks :: [Sink]
-    , store  :: TVar (M.Map Key (TVar Metric))
+    { interval :: Int
+    , sinks    :: [Sink]
+    , store    :: TVar (M.Map Key (TVar Metric))
     }
 
 type Vodki a = ReaderT State IO a
@@ -68,9 +72,9 @@ flush s@State{..} key = void . forkIO $ do
     threadDelay n
     v  <- delete s key
     ts <- getPOSIXTime
-    emit sinks $ Flush key v ts delay
+    emit sinks $ Flush key v ts interval
   where
-    n = delay * 1000000
+    n = interval * 1000000
 
 delete :: State -> Key -> IO Metric
 delete State{..} key = atomically $ do
