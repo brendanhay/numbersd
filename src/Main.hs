@@ -24,15 +24,15 @@ import Vodki.Vodki
 
 main :: IO ()
 main = do
-    Config{..} <- getConfig
-    sinks <- sequence [dumpMessages, repeater "" 0, graphite "" 0]
+    Options{..} <- parseOptions
+    -- sinks <- sequence [repeater "" 0]
     putStrLn "Sinks started..."
-    sock <- listen _listenPort
+    sock <- listen server
     putStrLn "Listening..."
-    runVodki _flushInterval sinks $ receive sock
+    runVodki interval [] $ receive sock
 
-listen :: Int -> IO Socket
-listen port = do
+listen :: Addr -> IO Socket
+listen (Addr _ port) = do
     (s, a) <- openSocket Nothing port Datagram
     bindSocket s a
     return s
