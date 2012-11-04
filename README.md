@@ -24,7 +24,7 @@ I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
 You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain here: http://www.haskell.org/platform/
 
-Then run `make install` in the root directory compile vodki.
+Then run `make install` in the root directory to compile vodki.
 
 **Running**
 
