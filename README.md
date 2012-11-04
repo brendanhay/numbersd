@@ -4,33 +4,34 @@ Vodki
 Table of Contents
 -----------------
 
-* [Usage](#usage)
+* [Install](#install)
+* [Running](#running)
 * [Contribute](#contribute)
 * [Licence](#licence)
 
 
-<a name="usage" />
+<a name="install" />
 
-Usage
------
+Install
+-------
 
 At present, it is assumed the user knows some of the Haskell eco system and
 in particular wrangling cabal-dev to obtain dependencies.
 
 I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
 
-**Compiling**
-
 You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain here: http://www.haskell.org/platform/
 
 Then run `make install` in the root directory to compile vodki.
 
-**Running**
+
+<a name="running">
+
+Running
+-------
 
 After a successful compile, the `./vodki` symlink should be pointing to the built binary.
-
-**Configuration**
 
 Command line flags are used to configure vodki, below is a table containing
 the available settings and which statsd configuration keys they pertain to:
