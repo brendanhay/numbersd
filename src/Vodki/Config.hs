@@ -94,14 +94,14 @@ parseOptions = do
 flags :: String -> Mode Options
 flags name = mode name defaultOptions "Vodki"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
-    [ flagReq ["server"] (f setServer) "HOST:PORT" "server"
-    , flagReq ["management"] (f setManagement) "HOST:PORT" "management"
-    , flagReq ["interval"] (f setInterval) "SECONDS" "interval"
-    , flagReq ["percentiles"] (g setPercentiles) "[INT]" "percentiles"
-    , flagReq ["console"] (g setConsole) "[EVENT]" "where EVENT is a list of receive,invalid,parse,flush"
-    , flagReq ["graphite"] (g setGraphite) "[HOST:PORT]" "graphite"
-    , flagReq ["repeater"] (g setRepeater) "[HOST:PORT]" "repeater"
-    , flagReq ["statsd"] (g setStatsd) "[HOST:PORT]" "statsd"
+    [ flagReq ["server"] (f setServer) "ADDR:PORT" "Incoming stats UDP address and port"
+    , flagReq ["management"] (f setManagement) "ADDR:PORT" "Management interface TCP address and port"
+    , flagReq ["interval"] (f setInterval) "SECONDS" "Interval between key flushes to subscribed sinks"
+    , flagReq ["percentiles"] (g setPercentiles) "[INT]" "Calculate the Nth percentile(s) for timers"
+    , flagReq ["console"] (g setConsole) "[EVENT]" "Which [receive,invalid,parse,flush] events to log"
+    , flagReq ["graphite"] (g setGraphite) "[ADDR:PORT]" "Graphite hosts to deliver metrics to"
+    , flagReq ["repeater"] (g setRepeater) "[ADDR:PORT]" "Statsd hosts to forward raw unaggregated packets to"
+    , flagReq ["statsd"] (g setStatsd) "[ADDR:PORT]" "Statsd hosts to forward aggregated counters to"
     , flagNone ["help", "h"] (\_ -> Help) "Display this help message"
     , flagVersion $ \_ -> Version
     ]
