@@ -79,7 +79,7 @@ the available settings and which statsd configuration keys they pertain to:
    <tr>
     <td><code>--percentiles</code></td>
     <td><code>90</code></td>
-    <td><code>INT,INT,...</code></td>
+    <td><code>INT,...</code></td>
     <td>Calculate the Nth percentile(s) for timers</td>
     <td><code>percentThreshold</code></td>
   </tr>
@@ -87,7 +87,7 @@ the available settings and which statsd configuration keys they pertain to:
    <tr>
     <td><code>--console</code></td>
     <td></td>
-    <td><code>receive,flush,...</code></td>
+    <td><code>receive,...</code></td>
     <td>Which [receive,invalid,parse,flush] events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
   </tr>
@@ -95,7 +95,7 @@ the available settings and which statsd configuration keys they pertain to:
    <tr>
     <td><code>--graphite</code></td>
     <td></td>
-    <td><code>HOST:PORT,HOST:PORT,...</code></td>
+    <td><code>HOST:PORT,...</code></td>
     <td>Graphite hosts to deliver metrics to</td>
     <td><code>graphiteHost</code>, <code>graphitePort</code></td>
   </tr>
@@ -103,7 +103,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--repeater</code></td>
     <td></td>
-    <td><code>HOST:PORT,HOST:PORT,...</code></td>
+    <td><code>HOST:PORT,...</code></td>
     <td>Statsd hosts to forward raw (unaggregated) packets to</td>
     <td><code>repeater</code></td>
   </tr>
@@ -111,7 +111,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--statsd</code></td>
     <td></td>
-    <td><code>HOST:PORT,HOST:PORT,...</code></td>
+    <td><code>HOST:PORT,...</code></td>
     <td>Statsd hosts to forward aggregated counters to</td>
     <td><code>backends</code></td>
   </tr>
