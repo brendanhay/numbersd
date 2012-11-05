@@ -27,9 +27,9 @@ main = do
     Options{..} <- parseOptions
 
     sinks <- sequence $ [consoleSink console]
-                 ++ map graphiteSink graphite
-                 ++ map repeaterSink repeater
-                 ++ map statsdSink statsd
+        ++ map graphiteSink graphite
+        ++ map repeaterSink repeater
+        ++ map statsdSink statsd
 
     putStrLn "Sinks started..."
 
