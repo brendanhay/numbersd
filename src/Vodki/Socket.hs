@@ -70,9 +70,9 @@ openSocket (Addr host port) stype = do
 
 openSocketR :: Addr -> SocketType -> IO SocketR
 openSocketR addr typ = do
-    sa  <- openSocket addr typ
-    ref <- newIORef sa
-    return $ SocketR addr typ ref
+    sa <- openSocket addr typ
+    r  <- newIORef sa
+    return $ SocketR addr typ r
 
 sendR :: SocketR -> BS.ByteString -> IO ()
 sendR r@SocketR{..} bstr = retry 3
