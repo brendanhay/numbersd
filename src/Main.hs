@@ -25,22 +25,17 @@ import Vodki.Vodki
 main :: IO ()
 main = do
     Options{..} <- parseOptions
+
     sinks <- sequence $ [consoleSink console]
                  ++ map graphiteSink graphite
                  ++ map repeaterSink repeater
                  ++ map statsdSink statsd
     putStrLn "Sinks started..."
-    sock <- listen server
+
+    (sock, addr) <- openSocket server Datagram
+    bindSocket sock addr
     putStrLn "Listening..."
-    runVodki interval sinks $ receive sock
 
-listen :: Addr -> IO Socket
-listen addr = do
-    (s, a) <- openSocket addr Datagram
-    bindSocket s a
-    return s
-
-receive :: Socket -> Vodki ()
-receive sock = forever $ do
-    b <- liftIO $ recv sock 1024
-    storeMetric b
+    runVodki interval sinks . forever $ do
+        b <- liftIO $ recv sock 1024
+        storeMetric b

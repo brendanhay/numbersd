@@ -93,14 +93,12 @@ repeaterSink addr = do
 
 graphiteSink :: Addr -> IO Sink
 graphiteSink addr = do
-    r <- openSocketR addr Stream
     putStrLn $ "Graphite connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
         putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
 
 statsdSink :: Addr -> IO Sink
 statsdSink addr = do
-    r <- openSocketR addr Datagram
     putStrLn $ "Statsd connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
         putStrLn $ "Statsd: " ++ show k ++ " " ++ show v ++ " " ++ show ts
