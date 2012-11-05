@@ -112,7 +112,7 @@ the available settings and which statsd configuration keys they pertain to:
     <td><code>--broadcast</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>
-    <td>Hosts to broadcast raw (unaggregated, statsd format) packets to</td>
+    <td>Hosts to broadcast raw, unaggregated packets to</td>
     <td><code>repeater</code></td>
   </tr>
 
@@ -120,7 +120,7 @@ the available settings and which statsd configuration keys they pertain to:
     <td><code>--upstream</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>
-    <td>Hosts to forward aggregated (statsd format) counters to</td>
+    <td>Hosts to forward aggregated, statsd formatted counters to</td>
     <td><code>statsd-backend</code></td>
   </tr>
 
