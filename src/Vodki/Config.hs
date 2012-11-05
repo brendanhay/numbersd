@@ -27,7 +27,7 @@ import Paths_vodki                     (version)
 import System.Console.CmdArgs.Explicit
 import System.Environment
 import System.Exit
-import Vodki.Sink.Console
+import Vodki.Sink
 import Vodki.Socket
 
 data Options = Help | Version | Options

@@ -101,4 +101,3 @@ reopenR SocketR{..} = do
     close s
     sa <- openSocket connAddr connType
     writeIORef connRef sa
-
