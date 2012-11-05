@@ -5,10 +5,19 @@ Vodki
 Table of Contents
 -----------------
 
+* [Compatibility](#compatibility)
 * [Install](#install)
 * [Running](#running)
 * [Contribute](#contribute)
 * [Licence](#licence)
+
+
+<a name="compatibility" />
+
+Compatibility
+-------------
+
+> TODO
 
 
 <a name="install" />

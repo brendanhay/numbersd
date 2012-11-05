@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-
 -- |
 -- Module      : Vodki.Sink.Repeater
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -13,21 +11,13 @@
 --
 
 module Vodki.Sink.Repeater (
-      repeater
+      repeaterSink
     ) where
 
-import Control.Applicative        hiding (empty)
-import Control.Monad
-import Control.Concurrent
-import Control.Concurrent.STM
-import Data.Setters
-import Data.Time.Clock.POSIX
 import Vodki.Sink.Internal
+import Vodki.Socket
 
-import qualified Data.ByteString.Char8 as BS
-
-data Config = Config { host :: String, port :: Int }
-
-repeater :: [Config] -> IO Sink
-repeater cs = runSink . setReceive $ \s ->
-    putStrLn $ "Repeat: " ++ BS.unpack s
+repeaterSink :: Addr -> IO Sink
+repeaterSink addr = do
+    r <- openSocketR addr Datagram
+    runSink . setReceive $ sendR r

@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module      : Vodki.Sink
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -21,8 +19,10 @@ module Vodki.Sink (
     , emit
 
     -- * Sinks
-    , repeater
+    , consoleSink
+    , repeaterSink
     ) where
 
 import Vodki.Sink.Internal
+import Vodki.Sink.Console
 import Vodki.Sink.Repeater

@@ -18,22 +18,22 @@ module Main (
 import Control.Monad
 import Control.Monad.IO.Class
 import Vodki.Config
-import Vodki.Network
+import Vodki.Socket
 import Vodki.Sink
 import Vodki.Vodki
 
 main :: IO ()
 main = do
     Options{..} <- parseOptions
-    -- sinks <- sequence [repeater "" 0]
+    sinks <- sequence [consoleSink console]
     putStrLn "Sinks started..."
     sock <- listen server
     putStrLn "Listening..."
-    runVodki interval [] $ receive sock
+    runVodki interval sinks $ receive sock
 
 listen :: Addr -> IO Socket
-listen (Addr _ port) = do
-    (s, a) <- openSocket Nothing port Datagram
+listen addr = do
+    (s, a) <- openSocket addr Datagram
     bindSocket s a
     return s
 

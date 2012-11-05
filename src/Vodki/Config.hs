@@ -14,8 +14,7 @@
 
 module Vodki.Config (
     -- * Exported Types
-      Addr(..)
-    , Options(..)
+      Options(..)
 
     -- * Functions
     , parseOptions
@@ -28,28 +27,18 @@ import Paths_vodki                     (version)
 import System.Console.CmdArgs.Explicit
 import System.Environment
 import System.Exit
-
-data Addr = Addr String Int
-
-instance Read Addr where
-    readsPrec _ a = do
-        (h, b)   <- lex a
-        (":", c) <- lex b
-        (p, d)   <- lex c
-        return (Addr h $ read p, d)
-
-instance Show Addr where
-    show (Addr h p) = h ++ ":" ++ show p
+import Vodki.Sink.Console
+import Vodki.Socket
 
 data Options = Help | Version | Options
     { server      :: Addr
     , management  :: Addr
     , interval    :: Int
     , percentiles :: [Int]
-    , console     :: [Addr]
+    , console     :: [EventName]
     , graphite    :: [Addr]
-    , repeater    :: [String]
-    , statsd      :: [String]
+    , repeater    :: [Addr]
+    , statsd      :: [Addr]
     }
 
 $(declareSetters ''Options)
@@ -85,11 +74,9 @@ parseOptions = do
     a <- getArgs
     n <- getProgName
     case processValue (flags n) a of
-        Help    -> print (helpText [] HelpFormatOne $ flags n) >> ok
-        Version -> print (info n) >> ok
+        Help    -> print (helpText [] HelpFormatOne $ flags n) >> exitSuccess
+        Version -> print (info n) >> exitSuccess
         opts    -> putStr (show opts) >> return opts
-  where
-    ok = exitWith ExitSuccess
 
 flags :: String -> Mode Options
 flags name = mode name defaultOptions "Vodki"

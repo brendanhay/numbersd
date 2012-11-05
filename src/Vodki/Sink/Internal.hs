@@ -12,10 +12,20 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Sink.Internal where
+module Vodki.Sink.Internal (
+      Event(..)
+    , Sink(receive, invalid, parse, flush)
+    , setReceive
+    , setInvalid
+    , setParse
+    , setFlush
+    , emit
+    , runSink
+    ) where
 
 import Control.Applicative    hiding (empty)
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Setters
@@ -42,17 +52,11 @@ $(declareSetters ''Sink)
 emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
 
-newSink :: IO Sink
-newSink = Sink f f (\_ _ -> return ()) (\_ _ _ _ -> return ())
-    <$> atomically newTQueue
-  where
-    f _ = return ()
-
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do
-    s@Sink{..} <- f <$> newSink
-    void . forkIO . forever $ do
-        e <- atomically $ readTQueue events
+    s@Sink{..} <- liftIO $ f <$> newSink
+    liftIO . void . forkIO . forever $ do
+        e <- liftIO . atomically $ readTQueue events
         case e of
             (Receive bs)     -> receive bs
             (Invalid bs)     -> invalid bs
@@ -60,12 +64,10 @@ runSink f = do
             (Flush k v ts n) -> flush k v ts n
     return s
 
-
-
--- dumpMessages :: IO Sink
--- dumpMessages = runSink . setParse $ \k v ->
---     putStrLn $ "Dump: " ++ show k ++ " " ++ show v
-
--- graphite :: String -> Int -> IO Sink
--- graphite host port = runSink . setFlush $ \k v ts _ ->
---     putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+newSink :: IO Sink
+newSink = Sink
+    (\_ -> return ())
+    (\_ -> return ())
+    (\_ _ -> return ())
+    (\_ _ _ _ -> return ())
+    <$> atomically newTQueue

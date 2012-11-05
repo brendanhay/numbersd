@@ -34,7 +34,7 @@ executable vodki
                   , RecordWildCards
                   , TypeSynonymInstances
 
-  ghc-options:      -Wall -rtsopts -threaded
+  ghc-options:      -Wall -rtsopts -threaded -ddump-splices
   ghc-prof-options: -prof -fprof-auto -auto-all -with-rtsopts=-p
 
   build-depends:    base >= 4.3 && < 5
