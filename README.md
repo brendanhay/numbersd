@@ -88,7 +88,7 @@ the available settings and which statsd configuration keys they pertain to:
     <td><code>--console</code></td>
     <td></td>
     <td><code>receive,...</code></td>
-    <td>Which [receive,invalid,parse,flush] events to log</td>
+    <td>Combination of <code>receive</code>,<code>invalid</code>,<code>parse</code>,<code>flush</code> events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
   </tr>
 
