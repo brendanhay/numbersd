@@ -18,11 +18,8 @@ module Vodki.Socket (
     , openSocket
     , Socket
     , SocketType(..)
-    , S.send
     , S.recv
     , bindSocket
-    , connect
-    , setSocketOption
 
     -- * Retryable Sockets
     , SocketR
