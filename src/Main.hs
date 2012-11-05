@@ -30,10 +30,12 @@ main = do
                  ++ map graphiteSink graphite
                  ++ map repeaterSink repeater
                  ++ map statsdSink statsd
+
     putStrLn "Sinks started..."
 
     (sock, addr) <- openSocket server Datagram
     bindSocket sock addr
+
     putStrLn "Listening..."
 
     runVodki interval sinks . forever $ do
