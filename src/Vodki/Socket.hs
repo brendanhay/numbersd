@@ -84,21 +84,21 @@ sendR r@SocketR{..} bstr = retry 3
         S.sendAllTo s bstr a `catches`
             [ Handler (\e -> throw (e :: AsyncException))
             , Handler (\e -> do
-                  putStrLn $ msgR e n delay
+                  msgR e n delay
                   threadDelay $ delay * 1000000
                   reopenR r
                   retry $ n - 1)
             ]
 
-msgR :: SomeException -> Int -> Int -> String
-msgR e retries delay =
-    concat [ show e
-           , " -> "
-           , show retries
-           , " more attempts left, trying in "
-           , show delay
-           , " seconds"
-           ]
+msgR :: SomeException -> Int -> Int -> IO ()
+msgR e retries delay = putStrLn $ concat
+    [ show e
+    , " -> "
+    , show retries
+    , " more attempts left, trying in "
+    , show delay
+    , " seconds"
+    ]
 
 reopenR :: SocketR -> IO ()
 reopenR SocketR{..} = do
