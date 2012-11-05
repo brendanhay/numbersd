@@ -15,11 +15,11 @@ module Vodki.Socket (
       Addr(..)
 
     -- * Vanilla Sockets
-    , openSocket
     , Socket
     , SocketType(..)
-    , S.recv
+    , openSocket
     , bindSocket
+    , S.recv
 
     -- * Retryable Sockets
     , SocketR
@@ -29,8 +29,6 @@ module Vodki.Socket (
 
 import Control.Concurrent
 import Control.Exception
-import Control.Monad
-import Control.Monad.IO.Class
 import Data.IORef
 import Network.Socket
 
