@@ -23,7 +23,9 @@ module Vodki.Sink (
 
     -- * Sinks
     , consoleSink
+    , graphiteSink
     , repeaterSink
+    , statsdSink
     ) where
 
 import Control.Applicative    hiding (empty)
@@ -71,17 +73,15 @@ emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
 
 consoleSink :: [EventName] -> IO Sink
-consoleSink evts = runSink $ (flip $ foldl f) consoleF
+consoleSink evts = runSink $ (flip $ foldl f) set
   where
     f s (k, g) = if k `elem` evts then g s else s
-
-consoleF :: [(EventName, Sink -> Sink)]
-consoleF =
-    [ ("receive", setReceive $ \v -> putStrLn $ "Receive: " ++ BS.unpack v)
-    , ("invalid", setInvalid $ \v -> putStrLn $ "Invalid: " ++ BS.unpack v)
-    , ("parse", setParse $ \k v -> putStrLn $ "Parse: " ++ show k ++ " " ++ show v)
-    , ("flush", setFlush $ \k v _ _ -> putStrLn $ "Flush: " ++ show k ++ " " ++ show v)
-    ]
+    set :: [(EventName, Sink -> Sink)]
+    set = [ ("receive", setReceive $ \v -> putStrLn $ "Receive: " ++ BS.unpack v)
+          , ("invalid", setInvalid $ \v -> putStrLn $ "Invalid: " ++ BS.unpack v)
+          , ("parse", setParse $ \k v -> putStrLn $ "Parse: " ++ show k ++ " " ++ show v)
+          , ("flush", setFlush $ \k v _ _ -> putStrLn $ "Flush: " ++ show k ++ " " ++ show v)
+          ]
 
 repeaterSink :: Addr -> IO Sink
 repeaterSink addr = do
@@ -90,6 +90,20 @@ repeaterSink addr = do
     runSink . setReceive $ \s -> do
         putStrLn $ "Repeat: " ++ BS.unpack s ++ " to " ++ show addr
         sendR r s
+
+graphiteSink :: Addr -> IO Sink
+graphiteSink addr = do
+    r <- openSocketR addr Stream
+    putStrLn $ "Graphite connected to " ++ show addr
+    runSink . setFlush $ \k v ts n -> do
+        putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+
+statsdSink :: Addr -> IO Sink
+statsdSink addr = do
+    r <- openSocketR addr Datagram
+    putStrLn $ "Statsd connected to " ++ show addr
+    runSink . setFlush $ \k v ts n -> do
+        putStrLn $ "Statsd: " ++ show k ++ " " ++ show v ++ " " ++ show ts
 
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do

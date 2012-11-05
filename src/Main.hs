@@ -25,7 +25,10 @@ import Vodki.Vodki
 main :: IO ()
 main = do
     Options{..} <- parseOptions
-    sinks <- sequence $ [consoleSink console] ++ map repeaterSink repeater
+    sinks <- sequence $ [consoleSink console]
+                 ++ map graphiteSink graphite
+                 ++ map repeaterSink repeater
+                 ++ map statsdSink statsd
     putStrLn "Sinks started..."
     sock <- listen server
     putStrLn "Listening..."
