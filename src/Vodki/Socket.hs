@@ -55,7 +55,7 @@ instance Show Addr where
 data SocketR = SocketR
     { connAddr :: Addr
     , connType :: SocketType
-    , connRef  :: IORef Socket
+    , connRef  :: IORef (Socket, SockAddr)
     }
 
 openSocket :: Addr -> SocketType -> IO (Socket, SockAddr)
@@ -70,29 +70,40 @@ openSocket (Addr host port) stype = do
 
 openSocketR :: Addr -> SocketType -> IO SocketR
 openSocketR addr typ = do
-    (s, _) <- openSocket addr typ
-    ref    <- newIORef s
+    sa  <- openSocket addr typ
+    ref <- newIORef sa
     return $ SocketR addr typ ref
 
 sendR :: SocketR -> BS.ByteString -> IO ()
-sendR SocketR{..} bstr = retry 2
+sendR r@SocketR{..} bstr = retry 3
   where
+    delay   = 3
     retry 0 = fail "Out of retries, bitches!"
     retry n = do
-        s <- readIORef connRef
-        liftIO $ S.sendAll s bstr
+        (s, a) <- readIORef connRef
+        S.sendAllTo s bstr a `catches`
+            [ Handler (\e -> throw (e :: AsyncException))
+            , Handler (\e -> do
+                  putStrLn $ msgR e n delay
+                  threadDelay $ delay * 1000000
+                  reopenR r
+                  retry $ n - 1)
+            ]
 
- -- `catches`
- --             [ Handler (\e -> throw (e :: AsyncException))
- --             , Handler (\e -> do
- --                            liftIO . putStrLn $ "Send failed: " ++ show e ++ show n ++ " more tries left."
- --                            reopenR
- --                            retry $ n - 1)
- --             ]
+msgR :: SomeException -> Int -> Int -> String
+msgR e retries delay =
+    concat [ show e
+           , " -> "
+           , show retries
+           , " more attempts left, trying in "
+           , show delay
+           , " seconds"
+           ]
 
--- reopenR :: SocketR -> IO ()
--- reopenR r@SocketR{..} = do
---     readIORef connRef >>= close
---     (s, _) <- openSocket connAddress connType
---     writeIORef connRef s
---     return r
+reopenR :: SocketR -> IO ()
+reopenR SocketR{..} = do
+    (s, _) <- readIORef connRef
+    close s
+    sa <- openSocket connAddr connType
+    writeIORef connRef sa
+

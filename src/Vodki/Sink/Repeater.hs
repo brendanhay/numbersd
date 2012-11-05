@@ -17,7 +17,12 @@ module Vodki.Sink.Repeater (
 import Vodki.Sink.Internal
 import Vodki.Socket
 
+import qualified Data.ByteString.Char8 as BS
+
 repeaterSink :: Addr -> IO Sink
 repeaterSink addr = do
     r <- openSocketR addr Datagram
-    runSink . setReceive $ sendR r
+    putStrLn $ "Repeater connected to " ++ show addr
+    runSink . setReceive $ \s -> do
+        putStrLn $ "Repeat: " ++ BS.unpack s ++ " to " ++ show addr
+        sendR r s
