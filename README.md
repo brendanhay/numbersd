@@ -95,7 +95,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--log-path</code></td>
     <td><code>stdout</code></td>
-    <td><code>./vodki.log</code></td>
+    <td><code>PATH</code></td>
     <td>Log file path to write events to</td>
     <td><code>log</code></td>
   </tr>
