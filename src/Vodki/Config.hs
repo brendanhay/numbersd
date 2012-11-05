@@ -35,7 +35,8 @@ data Options = Help | Version | Options
     , management  :: Addr
     , interval    :: Int
     , percentiles :: [Int]
-    , console     :: [EventName]
+    , log         :: [EventName]
+    , logPath     :: FilePath
     , graphite    :: [Addr]
     , repeater    :: [Addr]
     , statsd      :: [Addr]
@@ -50,7 +51,8 @@ instance Show Options where
         , " -> Management:     " ++ show management
         , " -> Flush Interval: " ++ show interval
         , " -> Percentiles:    " ++ show percentiles
-        , " -> Console:        " ++ show console
+        , " -> Log:            " ++ show log
+        , " -> Log Path:       " ++ show logPath
         , " -> Graphite:       " ++ show graphite
         , " -> Repeater:       " ++ show repeater
         , " -> Statsd:         " ++ show statsd
@@ -63,7 +65,8 @@ defaultOptions = Options
     , management  = Addr "0.0.0.0" 8126
     , interval    = 10
     , percentiles = [90]
-    , console     = []
+    , log         = []
+    , logPath     = "stdout"
     , graphite    = []
     , repeater    = []
     , statsd      = []
@@ -83,9 +86,10 @@ flags name = mode name defaultOptions "Vodki"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
     [ flagReq ["server"] (f setServer) "ADDR:PORT" "Incoming stats UDP address and port"
     , flagReq ["management"] (f setManagement) "ADDR:PORT" "Management interface TCP address and port"
-    , flagReq ["interval"] (f setInterval) "SECONDS" "Interval between key flushes to subscribed sinks"
+    , flagReq ["interval"] (f setInterval) "INT" "Interval between key flushes to subscribed sinks"
     , flagReq ["percentiles"] (g setPercentiles) "[INT]" "Calculate the Nth percentile(s) for timers"
-    , flagReq ["console"] (g setConsole) "[EVENT]" "Which [receive,invalid,parse,flush] events to log"
+    , flagReq ["log"] (g setLog) "[EVENT]" "Log [receive,invalid,parse,flush] events"
+    , flagReq ["logPath"] (g setLogPath) "PATH" "Log file path, or stdout"
     , flagReq ["graphite"] (g setGraphite) "[ADDR:PORT]" "Graphite hosts to deliver metrics to"
     , flagReq ["repeater"] (g setRepeater) "[ADDR:PORT]" "Statsd hosts to forward raw unaggregated packets to"
     , flagReq ["statsd"] (g setStatsd) "[ADDR:PORT]" "Statsd hosts to forward aggregated counters to"

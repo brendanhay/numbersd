@@ -26,7 +26,7 @@ main :: IO ()
 main = do
     Options{..} <- parseOptions
 
-    sinks <- sequence $ [consoleSink console]
+    sinks <- sequence $ [logSink logPath log]
         ++ map graphiteSink graphite
         ++ map repeaterSink repeater
         ++ map statsdSink statsd

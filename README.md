@@ -85,14 +85,22 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
    <tr>
-    <td><code>--console</code></td>
+    <td><code>--log</code></td>
     <td></td>
     <td><code>receive,...</code></td>
     <td>Combination of receive, invalid, parse, or flush events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
   </tr>
 
-   <tr>
+  <tr>
+    <td><code>--log-path</code></td>
+    <td><code>stdout</code></td>
+    <td><code>./vodki.log</code></td>
+    <td>Log file path to write events to</td>
+    <td><code>log</code></td>
+  </tr>
+
+  <tr>
     <td><code>--graphite</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>

@@ -22,7 +22,7 @@ module Vodki.Sink (
     , emit
 
     -- * Sinks
-    , consoleSink
+    , logSink
     , graphiteSink
     , repeaterSink
     , statsdSink
@@ -72,8 +72,8 @@ $(declareSetters ''Sink)
 emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
 
-consoleSink :: [EventName] -> IO Sink
-consoleSink evts = runSink $ (flip $ foldl f) set
+logSink :: FilePath -> [EventName] -> IO Sink
+logSink _ evts = runSink $ (flip $ foldl f) set
   where
     f s (k, g) = if k `elem` evts then g s else s
     set :: [(EventName, Sink -> Sink)]
