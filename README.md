@@ -109,19 +109,19 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
   <tr>
-    <td><code>--repeater</code></td>
+    <td><code>--broadcast</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>
-    <td>Statsd hosts to forward raw (unaggregated) packets to</td>
+    <td>Hosts to broadcast raw (unaggregated, statsd format) packets to</td>
     <td><code>repeater</code></td>
   </tr>
 
   <tr>
-    <td><code>--statsd</code></td>
+    <td><code>--upstream</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>
-    <td>Statsd hosts to forward aggregated counters to</td>
-    <td><code>backends</code></td>
+    <td>Hosts to forward aggregated (statsd format) counters to</td>
+    <td><code>statsd-backend</code></td>
   </tr>
 
 </table>

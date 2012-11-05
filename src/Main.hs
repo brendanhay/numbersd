@@ -28,8 +28,8 @@ main = do
 
     sinks <- sequence $ [logSink logPath log]
         ++ map graphiteSink graphite
-        ++ map repeaterSink repeater
-        ++ map statsdSink statsd
+        ++ map broadcastSink broadcast
+        ++ map upstreamSink upstream
 
     putStrLn "Sinks started..."
 

@@ -24,8 +24,8 @@ module Vodki.Sink (
     -- * Sinks
     , logSink
     , graphiteSink
-    , repeaterSink
-    , statsdSink
+    , broadcastSink
+    , upstreamSink
     ) where
 
 import Control.Applicative    hiding (empty)
@@ -83,12 +83,12 @@ logSink _ evts = runSink $ (flip $ foldl f) set
           , ("flush", setFlush $ \k v _ _ -> putStrLn $ "Flush: " ++ show k ++ " " ++ show v)
           ]
 
-repeaterSink :: Addr -> IO Sink
-repeaterSink addr = do
+broadcastSink :: Addr -> IO Sink
+broadcastSink addr = do
     r <- openSocketR addr Datagram
-    putStrLn $ "Repeater connected to " ++ show addr
+    putStrLn $ "Broadcast connected to " ++ show addr
     runSink . setReceive $ \s -> do
-        putStrLn $ "Repeat: " ++ BS.unpack s ++ " to " ++ show addr
+        putStrLn $ "Broadcast: " ++ BS.unpack s ++ " to " ++ show addr
         sendR r s
 
 graphiteSink :: Addr -> IO Sink
@@ -97,11 +97,11 @@ graphiteSink addr = do
     runSink . setFlush $ \k v ts n -> do
         putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
 
-statsdSink :: Addr -> IO Sink
-statsdSink addr = do
-    putStrLn $ "Statsd connected to " ++ show addr
+upstreamSink :: Addr -> IO Sink
+upstreamSink addr = do
+    putStrLn $ "Upstream connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
-        putStrLn $ "Statsd: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+        putStrLn $ "Upstream: " ++ show k ++ " " ++ show v ++ " " ++ show ts
 
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do

@@ -38,8 +38,8 @@ data Options = Help | Version | Options
     , log         :: [EventName]
     , logPath     :: FilePath
     , graphite    :: [Addr]
-    , repeater    :: [Addr]
-    , statsd      :: [Addr]
+    , broadcast   :: [Addr]
+    , upstream    :: [Addr]
     }
 
 $(declareSetters ''Options)
@@ -54,8 +54,8 @@ instance Show Options where
         , " -> Log:            " ++ show log
         , " -> Log Path:       " ++ show logPath
         , " -> Graphite:       " ++ show graphite
-        , " -> Repeater:       " ++ show repeater
-        , " -> Statsd:         " ++ show statsd
+        , " -> Broadcast:      " ++ show broadcast
+        , " -> Upstream:       " ++ show upstream
         ]
     show _ = ""
 
@@ -68,8 +68,8 @@ defaultOptions = Options
     , log         = []
     , logPath     = "stdout"
     , graphite    = []
-    , repeater    = []
-    , statsd      = []
+    , broadcast   = []
+    , upstream    = []
     }
 
 parseOptions :: IO Options
@@ -91,8 +91,8 @@ flags name = mode name defaultOptions "Vodki"
     , flagReq ["log"] (g setLog) "[EVENT]" "Log [receive,invalid,parse,flush] events"
     , flagReq ["log-path"] (g setLogPath) "PATH" "Log file path, or stdout"
     , flagReq ["graphite"] (g setGraphite) "[ADDR:PORT]" "Graphite hosts to deliver metrics to"
-    , flagReq ["repeater"] (g setRepeater) "[ADDR:PORT]" "Statsd hosts to forward raw unaggregated packets to"
-    , flagReq ["statsd"] (g setStatsd) "[ADDR:PORT]" "Statsd hosts to forward aggregated counters to"
+    , flagReq ["broadcast"] (g setBroadcast) "[ADDR:PORT]" "Hosts to broadcast raw unaggregated packets to"
+    , flagReq ["upstream"] (g setUpstream) "[ADDR:PORT]" "Hosts to forward aggregated counters to"
     , flagNone ["help", "h"] (\_ -> Help) "Display this help message"
     , flagVersion $ \_ -> Version
     ]
