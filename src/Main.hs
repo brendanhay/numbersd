@@ -17,27 +17,37 @@ module Main (
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Vodki.Config
-import Vodki.Socket
-import Vodki.Sink
-import Vodki.Vodki
+import Numbers.Config
+import Numbers.Log
+import Numbers.Socket
+import Numbers.Sink
+import Numbers.Numbers
 
 main :: IO ()
 main = do
+    initLogger
+
     Options{..} <- parseOptions
 
-    sinks <- sequence $ [logSink logPath log]
-        ++ map graphiteSink graphite
+    sinks <- sequence $ [logSink logEvents logPath, statusSink status]
+        ++ map (graphiteSink graphitePrefix) graphite
         ++ map broadcastSink broadcast
-        ++ map upstreamSink upstream
+        ++ map downstreamSink downstream
 
-    putStrLn "Sinks started..."
+    infoL "Sinks started..."
 
-    (sock, addr) <- openSocket server Datagram
+    (sock, addr) <- openSocket listener Datagram
     bindSocket sock addr
 
-    putStrLn "Listening..."
+-- start management server here
+-- use tvar around sinks inside the Numbers transformer to
+-- update? change to a statet?
 
-    runVodki interval sinks . forever $ do
+-- create the tvar here and pass to both runManagement
+-- and runServer?
+
+    infoL "Listening..."
+
+    runNumbers interval sinks . forever $ do
         b <- liftIO $ recv sock 1024
         storeMetric b

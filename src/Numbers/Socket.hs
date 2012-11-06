@@ -1,5 +1,5 @@
 -- |
--- Module      : Vodki.Socket
+-- Module      : Numbers.Socket
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,7 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Socket (
+module Numbers.Socket (
     -- * Exported Types
       Addr(..)
 

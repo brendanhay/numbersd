@@ -1,12 +1,12 @@
-name:               vodki
+name:               numbersd
 version:            0.1.0
 synopsis:           Port of statsd to Haskell
 license:            OtherLicense
 license-file:       LICENSE
 author:             Brendan Hay <brendan@soundcloud.com>
 maintainer:         Brendan Hay <brendan@soundcloud.com>
-homepage:           http://github.com/brendanhay/vodki
-bug-reports:        http://github.com/brendanhay/vodki/issues
+homepage:           http://github.com/brendanhay/numbersd
+bug-reports:        http://github.com/brendanhay/numbersd/issues
 category:           Metrics, Monitoring
 stability:          Experimental
 build-type:         Simple
@@ -18,9 +18,9 @@ extra-source-files: README.md
 
 source-repository head
   type:     git
-  location: git://github.com/brendanhay/vodki.git
+  location: git://github.com/brendanhay/numbersd.git
 
-executable vodki
+executable numbersd
   main-is:          Main.hs
 
   hs-source-dirs:   src
@@ -39,10 +39,13 @@ executable vodki
 
   build-depends:    base >= 4.3 && < 5
                   , attoparsec
+                  , blaze-builder
                   , bytestring
                   , cmdargs
                   , containers
                   , directory
+                  , hslogger
+                  , http-types
                   , mtl
                   , network
                   , regex-pcre
@@ -51,3 +54,5 @@ executable vodki
                   , stm
                   , time
                   , transformers
+                  , wai
+                  , warp

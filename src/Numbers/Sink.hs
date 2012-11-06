@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
--- Module      : Vodki.Sink
+-- Module      : Numbers.Sink
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -12,7 +12,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Sink (
+module Numbers.Sink (
     -- * Event Type
       Event(..)
     , EventName
@@ -25,7 +25,8 @@ module Vodki.Sink (
     , logSink
     , graphiteSink
     , broadcastSink
-    , upstreamSink
+    , downstreamSink
+    , statusSink
     ) where
 
 import Control.Applicative    hiding (empty)
@@ -36,8 +37,16 @@ import Control.Concurrent.STM
 import Data.Setters
 import Data.String
 import Data.Time.Clock.POSIX
-import Vodki.Metric
-import Vodki.Socket
+import System.IO
+import Numbers.Log
+import Numbers.Metric
+import Numbers.Socket
+
+import Network.Wai
+import Network.Wai.Handler.Warp
+import Network.HTTP.Types       (status200)
+import Blaze.ByteString.Builder (copyByteString)
+import Data.Monoid
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -72,36 +81,57 @@ $(declareSetters ''Sink)
 emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
 
-logSink :: FilePath -> [EventName] -> IO Sink
-logSink _ evts = runSink $ (flip $ foldl f) set
+logSink :: [EventName] -> String -> IO Sink
+logSink evts path = do
+    l <- newLogger "Log" path
+    runSink $ \s -> foldl f s (logEvents l)
   where
-    f s (k, g) = if k `elem` evts then g s else s
-    set :: [(EventName, Sink -> Sink)]
-    set = [ ("receive", setReceive $ \v -> putStrLn $ "Receive: " ++ BS.unpack v)
-          , ("invalid", setInvalid $ \v -> putStrLn $ "Invalid: " ++ BS.unpack v)
-          , ("parse", setParse $ \k v -> putStrLn $ "Parse: " ++ show k ++ " " ++ show v)
-          , ("flush", setFlush $ \k v _ _ -> putStrLn $ "Flush: " ++ show k ++ " " ++ show v)
-          ]
+    f s (k, g) = if k `elem` evts
+                  then g s
+                  else s
+
+logEvents :: (String -> IO ()) -> [(EventName, Sink -> Sink)]
+logEvents f =
+    [ ("receive", setReceive $ \v ->   f $ "Receive: " ++ BS.unpack v)
+    , ("invalid", setInvalid $ \v ->   f $ "Invalid: " ++ BS.unpack v)
+    , ("parse", setParse $ \k v ->     f $ "Parse: " ++ show k ++ " " ++ show v)
+    , ("flush", setFlush $ \k v _ _ -> f $ "Flush: " ++ show k ++ " " ++ show v)
+    ]
 
 broadcastSink :: Addr -> IO Sink
 broadcastSink addr = do
     r <- openSocketR addr Datagram
-    putStrLn $ "Broadcast connected to " ++ show addr
+    infoL $ "Broadcast connected to " ++ show addr
     runSink . setReceive $ \s -> do
-        putStrLn $ "Broadcast: " ++ BS.unpack s ++ " to " ++ show addr
+        infoL $ "Broadcast: " ++ BS.unpack s ++ " to " ++ show addr
         sendR r s
 
-graphiteSink :: Addr -> IO Sink
-graphiteSink addr = do
-    putStrLn $ "Graphite connected to " ++ show addr
+graphiteSink :: String -> Addr -> IO Sink
+graphiteSink prefix addr = do
+    infoL $ "Graphite connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
-        putStrLn $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+        infoL $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
 
-upstreamSink :: Addr -> IO Sink
-upstreamSink addr = do
-    putStrLn $ "Upstream connected to " ++ show addr
+downstreamSink :: Addr -> IO Sink
+downstreamSink addr = do
+    infoL $ "Upstream connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
-        putStrLn $ "Upstream: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+        infoL $ "Upstream: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+
+statusSink :: Addr -> IO Sink
+statusSink (Addr _ port) = do
+    forkIO $ run port app
+
+    runSink . setFlush $ \k _ _ _ -> do
+        putStrLn $ "Status: " ++ show k ++ " on " ++ show port
+
+app req = return builderNoLen
+
+builderNoLen = ResponseBuilder
+    status200
+    [ ("Content-Type", "text/plain")
+    ]
+    $ copyByteString "PONG"
 
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do

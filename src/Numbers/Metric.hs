@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 
 -- |
--- Module      : Vodki.Metric
+-- Module      : Numbers.Metric
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -12,7 +12,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Metric (
+module Numbers.Metric (
       Metric(..)
     , Key(..)
     , append

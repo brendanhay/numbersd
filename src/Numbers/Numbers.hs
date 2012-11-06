@@ -1,5 +1,5 @@
 -- |
--- Module      : Vodki.Vodki
+-- Module      : Numbers.Numbers
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,9 +10,9 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Vodki.Vodki (
-      Vodki
-    , runVodki
+module Numbers.Numbers (
+      Numbers
+    , runNumbers
     , storeMetric
     ) where
 
@@ -24,8 +24,8 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Maybe
 import Data.Time.Clock.POSIX
-import Vodki.Metric
-import Vodki.Sink
+import Numbers.Metric
+import Numbers.Sink
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M
@@ -36,14 +36,14 @@ data State = State
     , store    :: TVar (M.Map Key (TVar Metric))
     }
 
-type Vodki a = ReaderT State IO a
+type Numbers a = ReaderT State IO a
 
-runVodki :: Int -> [Sink] -> Vodki a -> IO a
-runVodki n sinks vodki = do
+runNumbers :: Int -> [Sink] -> Numbers a -> IO a
+runNumbers n sinks vodki = do
     s <- State n sinks <$> atomically (newTVar M.empty)
     runReaderT vodki s
 
-storeMetric :: BS.ByteString -> Vodki ()
+storeMetric :: BS.ByteString -> Numbers ()
 storeMetric bstr = ask >>= liftIO . flip insert bstr
 
 insert :: State -> BS.ByteString -> IO ()

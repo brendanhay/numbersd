@@ -1,5 +1,5 @@
 
-Vodki
+NumbersD
 =====
 
 Table of Contents
@@ -29,7 +29,7 @@ At present, it is assumed the user knows some of the Haskell eco system and
 in particular wrangling cabal-dev to obtain dependencies. I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
 
 You will need reasonably new versions of GHC and the Haskell Platform which
-you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile vodki.
+you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile numbersd.
 
 
 <a name="running">
@@ -37,9 +37,9 @@ you can obtain [here](http://www.haskell.org/platform/), then run `make install`
 Running
 -------
 
-After a successful compile, the `./vodki` symlink should be pointing to the built binary.
+After a successful compile, the `./numbersd` symlink should be pointing to the built binary.
 
-Command line flags are used to configure vodki, below is a table containing
+Command line flags are used to configure numbersd, below is a table containing
 the available settings and which statsd configuration keys they pertain to:
 
 <table width="100%">
@@ -117,7 +117,7 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
   <tr>
-    <td><code>--upstream</code></td>
+    <td><code>--downstream</code></td>
     <td></td>
     <td><code>HOST:PORT,...</code></td>
     <td>Hosts to forward aggregated, statsd formatted counters to</td>
@@ -131,7 +131,7 @@ the available settings and which statsd configuration keys they pertain to:
 Contribute
 ----------
 
-For any problems, comments or feedback please create an issue [here on GitHub](github.com/brendanhay/vodki/issues).
+For any problems, comments or feedback please create an issue [here on GitHub](github.com/brendanhay/numbersd/issues).
 
 
 <a name="licence" />
@@ -139,4 +139,4 @@ For any problems, comments or feedback please create an issue [here on GitHub](g
 Licence
 -------
 
-Vodki is released under the [Mozilla Public License Version 2.0](http://www.mozilla.org/MPL/)
+NumbersD is released under the [Mozilla Public License Version 2.0](http://www.mozilla.org/MPL/)
