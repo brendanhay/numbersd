@@ -34,7 +34,7 @@ executable numbersd
                   , TypeSynonymInstances
 
   ghc-options:      -Wall -rtsopts -threaded
-  ghc-prof-options: -prof -fprof-auto -auto-all -with-rtsopts=-p
+  ghc-prof-options: -prof -fprof-auto -auto-all
 
   build-depends:    base >= 4.3 && < 5
                   , aeson
