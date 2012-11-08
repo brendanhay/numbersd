@@ -20,9 +20,9 @@ conf:
 clean:
 	$(CABAL) clean
 
-prof: clean
+prof:
 	$(CABAL) configure --enable-executable-profiling
-	$(MAKE) install
+	$(MAKE) build
 
 ghci:
 	$(CABAL) ghci
