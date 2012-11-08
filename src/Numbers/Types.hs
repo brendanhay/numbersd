@@ -96,10 +96,10 @@ instance Read Addr where
         return (Addr (BS.pack h) (read p), "")
 
 instance Show Addr where
-    show (Addr h p) = BS.unpack h ++ show p
+    show (Addr h p) = BS.unpack h ++ ":" ++ show p
 
 instance Loggable Addr where
-    build (Addr h p) = h +++ p
+    build (Addr h p) = h +++ ":" +++ p
 
 instance Loggable [Addr] where
     build = mconcat . intersperse (build ", ") . map build
