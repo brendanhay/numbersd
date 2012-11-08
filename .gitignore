@@ -5,7 +5,7 @@ cabal-dev
 *.chi
 *.chs.h
 *.org
-*.prof
-*.aux
-*.ps
-*.hp
+*.prof*
+*.aux*
+*.ps*
+*.hp*
