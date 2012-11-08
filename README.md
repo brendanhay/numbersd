@@ -61,7 +61,7 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
    <tr>
-    <td><code>--status</code></td>
+    <td><code>--overview</code></td>
     <td></td>
     <td><code>ADDR:PORT</code></td>
     <td>HTTP address and port for <code>/numbersd.json</code></td>
