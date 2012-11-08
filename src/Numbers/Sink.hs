@@ -20,13 +20,18 @@ module Numbers.Sink (
     -- * Opaque
     , Sink
     , emit
+    , runSink
+
+    , setReceive
+    , setInvalid
+    , setParse
+    , setFlush
 
     -- * Sinks
     , logSink
     , graphiteSink
     , broadcastSink
     , downstreamSink
-    , statusSink
     ) where
 
 import Control.Applicative    hiding (empty)
@@ -41,12 +46,6 @@ import System.IO
 import Numbers.Log
 import Numbers.Metric
 import Numbers.Socket
-
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Network.HTTP.Types       (status200)
-import Blaze.ByteString.Builder (copyByteString)
-import Data.Monoid
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -117,21 +116,6 @@ downstreamSink addr = do
     infoL $ "Upstream connected to " ++ show addr
     runSink . setFlush $ \k v ts n -> do
         infoL $ "Upstream: " ++ show k ++ " " ++ show v ++ " " ++ show ts
-
-statusSink :: Addr -> IO Sink
-statusSink (Addr _ port) = do
-    forkIO $ run port app
-
-    runSink . setFlush $ \k _ _ _ -> do
-        putStrLn $ "Status: " ++ show k ++ " on " ++ show port
-
-app req = return builderNoLen
-
-builderNoLen = ResponseBuilder
-    status200
-    [ ("Content-Type", "text/plain")
-    ]
-    $ copyByteString "PONG"
 
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do

@@ -6,3 +6,6 @@ cabal-dev
 *.chs.h
 *.org
 *.prof
+*.aux
+*.ps
+*.hp

@@ -23,7 +23,7 @@ module Numbers.Config (
 import Data.Setters
 import Data.List.Split                 (splitOn)
 import Data.Version                    (showVersion)
-import Paths_vodki                     (version)
+import Paths_numbersd                  (version)
 import System.Console.CmdArgs.Explicit
 import System.Environment
 import System.Exit

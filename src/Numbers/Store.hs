@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Numbers
+-- Module      : Numbers.Store
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,9 +10,9 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Numbers (
-      Numbers
-    , runNumbers
+module Numbers.Store (
+      Store
+    , runStore
     , storeMetric
     ) where
 
@@ -36,14 +36,14 @@ data State = State
     , store    :: TVar (M.Map Key (TVar Metric))
     }
 
-type Numbers a = ReaderT State IO a
+type Store a = ReaderT State IO a
 
-runNumbers :: Int -> [Sink] -> Numbers a -> IO a
-runNumbers n sinks vodki = do
+runStore :: Int -> [Sink] -> Store a -> IO a
+runStore n sinks vodki = do
     s <- State n sinks <$> atomically (newTVar M.empty)
     runReaderT vodki s
 
-storeMetric :: BS.ByteString -> Numbers ()
+storeMetric :: BS.ByteString -> Store ()
 storeMetric bstr = ask >>= liftIO . flip insert bstr
 
 insert :: State -> BS.ByteString -> IO ()

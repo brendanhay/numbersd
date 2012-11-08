@@ -19,12 +19,13 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Numbers.Config
 import Numbers.Log
-import Numbers.Socket
 import Numbers.Sink
-import Numbers.Numbers
+import Numbers.Sink.Status
+import Numbers.Socket
+import Numbers.Store
 
 main :: IO ()
-main = do
+main = withSocketsDo $ do
     initLogger
 
     Options{..} <- parseOptions
@@ -36,8 +37,8 @@ main = do
 
     infoL "Sinks started..."
 
-    (sock, addr) <- openSocket listener Datagram
-    bindSocket sock addr
+    (s, a) <- openSocket listener Datagram
+    bindSocket s a
 
 -- start management server here
 -- use tvar around sinks inside the Numbers transformer to
@@ -48,6 +49,6 @@ main = do
 
     infoL "Listening..."
 
-    runNumbers interval sinks . forever $ do
-        b <- liftIO $ recv sock 1024
+    runStore interval sinks . forever $ do
+        b <- liftIO $ recv s 1024
         storeMetric b

@@ -17,8 +17,12 @@ module Numbers.Socket (
     -- * Vanilla Sockets
     , Socket
     , SocketType(..)
+    , withSocketsDo
     , openSocket
+    , accept
     , bindSocket
+    , sClose
+    , S.sendAll
     , S.recv
 
     -- * Retryable Sockets

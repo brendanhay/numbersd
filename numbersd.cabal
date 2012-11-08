@@ -39,13 +39,11 @@ executable numbersd
 
   build-depends:    base >= 4.3 && < 5
                   , attoparsec
-                  , blaze-builder
                   , bytestring
                   , cmdargs
                   , containers
                   , directory
                   , hslogger
-                  , http-types
                   , mtl
                   , network
                   , regex-pcre
@@ -54,5 +52,3 @@ executable numbersd
                   , stm
                   , time
                   , transformers
-                  , wai
-                  , warp
