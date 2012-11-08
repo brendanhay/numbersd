@@ -30,25 +30,31 @@ executable numbersd
                     DeriveDataTypeable
                   , FlexibleInstances
                   , MultiParamTypeClasses
-                  , OverloadedStrings
                   , RecordWildCards
                   , TypeSynonymInstances
 
-  ghc-options:      -Wall -rtsopts -threaded -ddump-splices
+  ghc-options:      -Wall -rtsopts -threaded
   ghc-prof-options: -prof -fprof-auto -auto-all -with-rtsopts=-p
 
   build-depends:    base >= 4.3 && < 5
+                  , aeson
                   , attoparsec
+                  , blaze-builder
                   , bytestring
                   , cmdargs
                   , containers
+                  , data-lens
+                  , data-lens-template
                   , directory
-                  , hslogger
+                  , fast-logger
+                  , http-types
                   , mtl
                   , network
                   , regex-pcre
-                  , setters
                   , split
                   , stm
+                  , text
                   , time
                   , transformers
+                  , wai
+                  , warp
