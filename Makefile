@@ -14,13 +14,14 @@ build:
 install:
 	$(CABAL) install
 
-conf:
-	$(CABAL) configure
-
 clean:
 	$(CABAL) clean
 
-prof:
+conf: clean
+	$(CABAL) configure
+	$(MAKE) build
+
+prof: clean
 	$(CABAL) configure --enable-executable-profiling
 	$(MAKE) build
 
