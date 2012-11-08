@@ -20,60 +20,63 @@ module Numbers.Config (
     , parseOptions
     ) where
 
-import Data.Setters
+import Data.Lens.Common
+import Data.Lens.Template
 import Data.List.Split                 (splitOn)
+import Data.Monoid (mempty, mconcat)
 import Data.Version                    (showVersion)
 import Paths_numbersd                  (version)
 import System.Console.CmdArgs.Explicit
 import System.Environment
 import System.Exit
 import Numbers.Log
-import Numbers.Sink
-import Numbers.Socket
+import Numbers.Types
+
+import qualified Data.ByteString.Char8 as BS
 
 data Options = Help | Version | Options
-    { listener       :: Addr
-    , status         :: Addr
-    , interval       :: Int
-    , percentile     :: [Int]
-    , logEvents      :: [EventName]
-    , logPath        :: String
-    , graphite       :: [Addr]
-    , graphitePrefix :: String
-    , broadcast      :: [Addr]
-    , downstream     :: [Addr]
+    { _listener       :: Addr
+    , _status         :: Maybe Addr
+    , _interval       :: Int
+    , _percentile     :: [Int]
+    , _logEvents      :: [String]
+    , _logPath        :: String
+    , _graphite       :: [Addr]
+    , _graphitePrefix :: String
+    , _broadcast      :: [Addr]
+    , _downstream     :: [Addr]
     }
 
-$(declareSetters ''Options)
+$(makeLens ''Options)
 
-instance Show Options where
-    show Options{..} = unlines
-        [ "Configuration: "
-        , " -> UDP Listener:    " ++ show listener
-        , " -> HTTP Status:     " ++ show status
-        , " -> Flush Interval:  " ++ show interval
-        , " -> Percentile:      " ++ show percentile
-        , " -> Log Events:      " ++ show logEvents
-        , " -> Log Path:        " ++ show logPath
-        , " -> Graphite:        " ++ show graphite
-        , " -> Graphite Prefix: " ++ show graphitePrefix
-        , " -> Broadcast:       " ++ show broadcast
-        , " -> Downstream:      " ++ show downstream
+instance Loggable Options where
+    build Options{..} = mconcat
+        [ build "Configuration: \n"
+        , " -> UDP Listener:    " ++\ _listener
+        , " -> HTTP Status:     " ++\ _status
+        , " -> Flush Interval:  " ++\ _interval
+        , " -> Percentile:      " ++\ _percentile
+        , " -> Log Events:      " ++\ _logEvents
+        , " -> Log Path:        " ++\ _logPath
+        , " -> Graphite:        " ++\ _graphite
+        , " -> Graphite Prefix: " ++\ _graphitePrefix
+        , " -> Broadcast:       " ++\ _broadcast
+        , " -> Downstream:      " +++ _downstream
         ]
-    show _ = ""
+    build _ = mempty
 
 defaultOptions :: Options
 defaultOptions = Options
-    { listener       = Addr "0.0.0.0" 8125
-    , status         = Addr "0.0.0.0" 8126
-    , interval       = 10
-    , percentile     = [90]
-    , logEvents      = []
-    , logPath        = "stdout"
-    , graphite       = []
-    , graphitePrefix = "stats"
-    , broadcast      = []
-    , downstream     = []
+    { _listener       = Addr (BS.pack "0.0.0.0") 8125
+    , _status         = Nothing
+    , _interval       = 10
+    , _percentile     = [90]
+    , _logEvents      = ["flush"]
+    , _logPath        = "stdout"
+    , _graphite       = []
+    , _graphitePrefix = "stats"
+    , _broadcast      = []
+    , _downstream     = []
     }
 
 parseOptions :: IO Options
@@ -83,7 +86,7 @@ parseOptions = do
     case processValue (flags n) a of
         Help    -> print (helpText [] HelpFormatOne $ flags n) >> exitSuccess
         Version -> print (info n) >> exitSuccess
-        opts    -> infoL (show opts) >> return opts
+        opts    -> infoL opts >> return opts
 
 info :: String -> String
 info name = concat
@@ -96,41 +99,62 @@ info name = concat
 flags :: String -> Mode Options
 flags name = mode name defaultOptions "Numbers"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
-    [ flagReq ["listen"] (f setListener) "ADDR:PORT"
+    [ flagReq ["listen"]
+      (one listener)
+      "ADDR:PORT"
       "Incoming stats UDP address and port"
 
-    , flagReq ["status"] (f setStatus) "ADDR:PORT"
-      "HTTP status page address and port"
+    , flagReq ["status"]
+      (\s o -> Right $ (setL status . Just $ read s) o)
+      "ADDR:PORT"
+      "HTTP address and port for /numbers.json"
 
-    , flagReq ["interval"] (f setInterval) "INT"
+    , flagReq ["interval"]
+      (one interval)
+      "INT"
       "Interval between key flushes to subscribed sinks"
 
-    , flagReq ["percentile"] (g setPercentile) "[INT]"
+    , flagReq ["percentile"]
+      (many percentile)
+      "[INT]"
       "Calculate the Nth percentile(s) for timers"
 
-    , flagReq ["log"] (g setLogEvents) "[EVENT]"
-      "Log [receive,invalid,parse,flush] events"
+    , flagReq ["log"]
+      (\s o -> Right $ (logEvents ^= splitOn "," s) o)
+      "[EVENT]"
+      "Lomany [receive,invalid,parse,flush] events"
 
-    , flagReq ["log-path"] (\s o -> Right $ setLogPath s o) "PATH"
-      "Log file path, or stdout"
+    , flagReq ["log-path"]
+      (\s o -> Right $ (logPath ^= s) o)
+      "PATH"
+      "Lomany file path, or stdout"
 
-    , flagReq ["graphite"] (g setGraphite) "[ADDR:PORT]"
+    , flagReq ["graphite"]
+      (many graphite)
+      "[ADDR:PORT]"
       "Graphite hosts to deliver metrics to"
 
-    , flagReq ["graphite-prefix"] (g setGraphitePrefix) "STRING"
+    , flagReq ["graphite-prefix"]
+      (many graphitePrefix)
+      "STRING"
       "Prepended to all keys flushed to graphite"
 
-    , flagReq ["broadcast"] (g setBroadcast) "[ADDR:PORT]"
+    , flagReq ["broadcast"]
+      (many broadcast)
+      "[ADDR:PORT]"
       "Hosts to broadcast raw unaggregated packets to"
 
-    , flagReq ["downstream"] (g setDownstream) "[ADDR:PORT]"
+    , flagReq ["downstream"]
+      (many downstream)
+      "[ADDR:PORT]"
       "Hosts to forward aggregated counters to"
 
-    , flagNone ["help", "h"] (\_ -> Help)
+    , flagNone ["help", "h"]
+      (\_ -> Help)
       "Display this help message"
 
     , flagVersion $ \_ -> Version
     ]
   where
-    f upd s = Right . upd (read s)
-    g upd s = Right . upd (map read $ splitOn "," s)
+    one l s  = Right . setL l (read s)
+    many l s = Right . (setL l . map read $ splitOn "," s)

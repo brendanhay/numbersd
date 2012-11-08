@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+
 -- |
 -- Module      : Numbers.Sink.Status
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -14,42 +16,96 @@ module Numbers.Sink.Status (
       statusSink
     ) where
 
-import Control.Applicative    hiding (empty)
+import Blaze.ByteString.Builder  (Builder, copyByteString, fromLazyByteString)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Concurrent.STM
-import Data.Setters
-import Data.String
-import Data.Time.Clock.POSIX
-import System.IO
+import Data.Aeson
+import Data.Lens.Common
+import Data.Lens.Template
+import Network.Wai
+import Network.Wai.Handler.Warp
+import Network.HTTP.Types        (status200, status404)
+import Network.HTTP.Types.Status (Status)
 import Numbers.Log
-import Numbers.Metric
+import Numbers.Types
 import Numbers.Sink
-import Numbers.Socket
+
+import Data.Text.Encoding                (decodeUtf8)
 
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Map              as M
 
-statusSink :: Addr -> IO Sink
-statusSink addr = do
-    listen addr
-    runSink id
+newtype Map = Map (M.Map Key Metric)
 
--- setFlush $ \k _ _ _ -> do
---         putStrLn $ "Status: " ++ show k ++ " on " ++ show addr
+instance ToJSON Map where
+    toJSON (Map m) = object . map f $ M.toAscList m
+      where
+        f (Key k, v) = decodeUtf8 k .= object
+            [ "value" .= v
+            , "timestamp" .= decodeUtf8 "0"
+            ]
 
-listen :: Addr -> IO ()
-listen addr = do
-    (s, a) <- openSocket addr Stream
-    bindSocket s a
-    void . forkIO . forever $ do
-        (s', _) <- accept s
-        respond s'
-        sClose s'
+data State = State
+    { _counters :: Map
+    , _timers   :: Map
+    , _gauges   :: Map
+    , _sets     :: Map
+    }
 
-respond :: Socket -> IO ()
-respond sock = do
-    sendAll sock $ BS.intercalate "\n"
-        [ "HTTP/1.1 200 OK"
-        , "some mad json yo!"
+instance ToJSON State where
+    toJSON State{..} = object
+        [ "counters" .= _counters
+        , "timers"   .= _timers
+        , "gauges"   .= _gauges
+        , "sets"     .= _sets
         ]
+
+$(makeLens ''State)
+
+statusSink :: Maybe Addr -> Maybe (IO Sink)
+statusSink Nothing               = Nothing
+statusSink (Just a@(Addr _ port)) = Just $ do
+    tvar <- newState
+    void . forkIO $ run port (liftIO . serve tvar)
+    infoL $ ("Status available at http://" :: BS.ByteString) +++ a +++ path
+    runSink $ flush ^= \k v _ _ ->
+        atomically . modifyTVar tvar $ addState k v
+
+newState :: IO (TVar State)
+newState = atomically . newTVar $ State m m m m
+  where
+    m = Map M.empty
+
+serve :: TVar State -> Request -> IO Response
+serve tvar req | rawPathInfo req == path = success `liftM` readTVarIO tvar
+               | otherwise               = return notFound
+
+path :: BS.ByteString
+path = "/numbers.json"
+
+success :: State -> Response
+success = response status200 . fromLazyByteString . encode
+
+notFound :: Response
+notFound = response status404 $ copyByteString "{\"error\": \"Not Found\"}"
+
+response :: Status -> Builder -> Response
+response status = ResponseBuilder status [("Content-Type", "application/json")]
+
+addState :: Key -> Metric -> State -> State
+addState key val = l $ insert key val
+  where
+    l = modL $ case val of
+        (Counter _) -> counters
+        (Timer _)   -> timers
+        (Gauge _)   -> gauges
+        (Set _)     -> sets
+
+insert :: Key -> Metric -> Map -> Map
+insert key val (Map inner) = Map $! M.alter f key inner
+  where
+    f (Just x) = Just $ x `append` val
+    f Nothing  = Just val
+

@@ -13,22 +13,21 @@
 --
 
 module Numbers.Sink (
-    -- * Event Type
+    -- * Event Constructors
       Event(..)
-    , EventName
 
     -- * Opaque
     , Sink
     , emit
     , runSink
 
-    , setReceive
-    , setInvalid
-    , setParse
-    , setFlush
+    -- * Lenses
+    , receive
+    , invalid
+    , parse
+    , flush
 
     -- * Sinks
-    , logSink
     , graphiteSink
     , broadcastSink
     , downstreamSink
@@ -39,13 +38,12 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Concurrent.STM
-import Data.Setters
-import Data.String
+import Data.Lens.Common
+import Data.Lens.Template
 import Data.Time.Clock.POSIX
-import System.IO
 import Numbers.Log
-import Numbers.Metric
 import Numbers.Socket
+import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -54,79 +52,49 @@ data Event = Receive BS.ByteString
            | Parse Key Metric
            | Flush Key Metric POSIXTime Int
 
-newtype EventName = EventName String deriving (Eq)
-
-instance Read EventName where
-    readsPrec _ a = do
-        (h, b) <- lex a
-        return (EventName h, b)
-
-instance Show EventName where
-    show (EventName s) = s
-
-instance IsString EventName where
-    fromString = EventName
-
 data Sink = Sink
-    { receive :: BS.ByteString -> IO ()
-    , invalid :: BS.ByteString -> IO ()
-    , parse   :: Key -> Metric -> IO ()
-    , flush   :: Key -> Metric -> POSIXTime -> Int -> IO ()
-    , events  :: TQueue Event
+    { _receive :: BS.ByteString -> IO ()
+    , _invalid :: BS.ByteString -> IO ()
+    , _parse   :: Key -> Metric -> IO ()
+    , _flush   :: Key -> Metric -> POSIXTime -> Int -> IO ()
+    , _events  :: TQueue Event
     }
 
-$(declareSetters ''Sink)
+$(makeLens ''Sink)
 
 emit :: [Sink] -> Event -> IO ()
-emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (events s) evt)
-
-logSink :: [EventName] -> String -> IO Sink
-logSink evts path = do
-    l <- newLogger "Log" path
-    runSink $ \s -> foldl f s (logEvents l)
-  where
-    f s (k, g) = if k `elem` evts
-                  then g s
-                  else s
-
-logEvents :: (String -> IO ()) -> [(EventName, Sink -> Sink)]
-logEvents f =
-    [ ("receive", setReceive $ \v ->   f $ "Receive: " ++ BS.unpack v)
-    , ("invalid", setInvalid $ \v ->   f $ "Invalid: " ++ BS.unpack v)
-    , ("parse", setParse $ \k v ->     f $ "Parse: " ++ show k ++ " " ++ show v)
-    , ("flush", setFlush $ \k v _ _ -> f $ "Flush: " ++ show k ++ " " ++ show v)
-    ]
+emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (_events s) evt)
 
 broadcastSink :: Addr -> IO Sink
 broadcastSink addr = do
     r <- openSocketR addr Datagram
-    infoL $ "Broadcast connected to " ++ show addr
-    runSink . setReceive $ \s -> do
-        infoL $ "Broadcast: " ++ BS.unpack s ++ " to " ++ show addr
+    infoL $ "Broadcast connected to " +++ addr
+    runSink $ receive ^= \s -> do
+        infoL $ "Broadcast: " +++ s +++ " to " +++ addr
         sendR r s
 
 graphiteSink :: String -> Addr -> IO Sink
-graphiteSink prefix addr = do
-    infoL $ "Graphite connected to " ++ show addr
-    runSink . setFlush $ \k v ts n -> do
-        infoL $ "Graphite: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+graphiteSink _prefix addr = do
+    infoL $ "Graphite connected to " +++ addr
+    runSink $ flush ^= \k v ts n ->
+        infoL $ "Graphite: " +++ k ++& v ++& ts
 
 downstreamSink :: Addr -> IO Sink
 downstreamSink addr = do
-    infoL $ "Upstream connected to " ++ show addr
-    runSink . setFlush $ \k v ts n -> do
-        infoL $ "Upstream: " ++ show k ++ " " ++ show v ++ " " ++ show ts
+    infoL $ "Upstream connected to " +++ addr
+    runSink $ flush ^= \k v ts n ->
+        infoL $ "Upstream: " +++ k ++& v ++& ts
 
 runSink :: (Sink -> Sink) -> IO Sink
 runSink f = do
     s@Sink{..} <- liftIO $ f <$> newSink
     liftIO . void . forkIO . forever $ do
-        e <- liftIO . atomically $ readTQueue events
+        e <- liftIO . atomically $ readTQueue _events
         case e of
-            (Receive bs)     -> receive bs
-            (Invalid bs)     -> invalid bs
-            (Parse k v)      -> parse k v
-            (Flush k v ts n) -> flush k v ts n
+            (Receive bs)     -> _receive bs
+            (Invalid bs)     -> _invalid bs
+            (Parse k v)      -> _parse k v
+            (Flush k v ts n) -> _flush k v ts n
     return s
 
 newSink :: IO Sink

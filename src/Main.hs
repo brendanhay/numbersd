@@ -17,27 +17,27 @@ module Main (
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Data.Maybe             (catMaybes)
 import Numbers.Config
 import Numbers.Log
 import Numbers.Sink
+import Numbers.Sink.Log
 import Numbers.Sink.Status
 import Numbers.Socket
 import Numbers.Store
 
 main :: IO ()
 main = withSocketsDo $ do
-    initLogger
-
     Options{..} <- parseOptions
 
-    sinks <- sequence $ [logSink logEvents logPath, statusSink status]
-        ++ map (graphiteSink graphitePrefix) graphite
-        ++ map broadcastSink broadcast
-        ++ map downstreamSink downstream
+    sinks <- sequence $ catMaybes [logSink _logEvents _logPath, statusSink _status]
+        ++ map (graphiteSink _graphitePrefix) _graphite
+        ++ map broadcastSink _broadcast
+        ++ map downstreamSink _downstream
 
     infoL "Sinks started..."
 
-    (s, a) <- openSocket listener Datagram
+    (s, a) <- openSocket _listener Datagram
     bindSocket s a
 
 -- start management server here
@@ -49,6 +49,6 @@ main = withSocketsDo $ do
 
     infoL "Listening..."
 
-    runStore interval sinks . forever $ do
+    runStore _interval sinks . forever $ do
         b <- liftIO $ recv s 1024
         storeMetric b

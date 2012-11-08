@@ -10,7 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Store (
+module Numbers.Store                 (
       Store
     , runStore
     , storeMetric
@@ -24,8 +24,8 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Maybe
 import Data.Time.Clock.POSIX
-import Numbers.Metric
-import Numbers.Sink
+import Numbers.Sink           hiding (flush)
+import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M

@@ -10,45 +10,31 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Log (
-      initLogger
-    , newLogger
-    , infoL
-    , errorL
-    ) where
+module Numbers.Log where
 
+import Control.Monad
+import Numbers.Types
+import System.Log.FastLogger
 import System.IO
-import System.Log.Formatter
-import System.Log.Logger
-import System.Log.Handler        (setFormatter)
-import System.Log.Handler.Simple
-import System.Log.Handler.Syslog
+import System.IO.Unsafe
 
-initLogger :: IO ()
-initLogger = do
-    removeAllHandlers
-    h <- streamHandler stdout level
-    configure name h
+infoL :: Loggable a => a -> IO ()
+infoL = errorL
 
-newLogger :: String -> FilePath -> IO (String -> IO ())
-newLogger n path = do
-    h <- if path == "stdout"
-          then streamHandler stdout level
-          else fileHandler path level
-    configure n h
-    infoM n "Creating"
-    return $ infoM n
+errorL :: Loggable a => a -> IO ()
+errorL = logL defaultLogger
 
-infoL  = infoM name
-errorL = errorM name
+logL :: Loggable a => Logger -> a -> IO ()
+logL logger s = loggerPutBuilder logger $ s +++ "\n"
 
-name :: String
-name = "Main"
+defaultLogger :: Logger
+defaultLogger = unsafePerformIO $ mkLogger True stdout
+{-# NOINLINE defaultLogger #-}
 
-configure n h = do
-    updateGlobalLogger n (setLevel level)
-    updateGlobalLogger n (addHandler $ setFormatter h format)
-
-level = INFO
-
-format = simpleLogFormatter "[$time : $loggername : $prio] $msg"
+newLogger :: Loggable a => FilePath -> IO (a -> IO ())
+newLogger path = do
+    h <- case path of
+             "stdout" -> return stdout
+             "stderr" -> return stderr
+             _        -> openFile path AppendMode
+    logL `liftM` mkLogger True h

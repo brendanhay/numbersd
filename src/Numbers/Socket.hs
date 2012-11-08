@@ -11,17 +11,14 @@
 --
 
 module Numbers.Socket (
-    -- * Exported Types
-      Addr(..)
-
     -- * Vanilla Sockets
-    , Socket
+      Socket
     , SocketType(..)
     , withSocketsDo
     , openSocket
     , accept
     , bindSocket
-    , sClose
+    , close
     , S.sendAll
     , S.recv
 
@@ -35,21 +32,10 @@ import Control.Concurrent
 import Control.Exception
 import Data.IORef
 import Network.Socket
+import Numbers.Types
 
 import qualified Data.ByteString.Char8     as BS
 import qualified Network.Socket.ByteString as S
-
-data Addr = Addr String Int
-
-instance Read Addr where
-    readsPrec _ a = do
-        (h, b)   <- lex a
-        (":", c) <- lex b
-        (p, d)   <- lex c
-        return (Addr h $ read p, d)
-
-instance Show Addr where
-    show (Addr h p) = h ++ ":" ++ show p
 
 data SocketR = SocketR
     { connAddr :: Addr
@@ -59,7 +45,7 @@ data SocketR = SocketR
 
 openSocket :: Addr -> SocketType -> IO (Socket, SockAddr)
 openSocket (Addr host port) stype = do
-    i:_ <- getAddrInfo proto (Just host) (Just $ show port)
+    i:_ <- getAddrInfo proto (Just $ BS.unpack host) (Just $ show port)
     s   <- socket (addrFamily i) stype defaultProtocol
     return (s, addrAddress i)
   where
