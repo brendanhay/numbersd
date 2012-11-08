@@ -69,7 +69,7 @@ statusSink Nothing               = Nothing
 statusSink (Just a@(Addr _ port)) = Just $ do
     tvar <- newState
     void . forkIO $ run port (liftIO . serve tvar)
-    infoL $ ("Status available at http://" :: BS.ByteString) +++ a +++ path
+    infoL $ ("Status available at http://" :: BS.ByteString) +++ a
     runSink $ flush ^= \(k, v, _, _) ->
         atomically . modifyTVar tvar $ addState k v
 
@@ -79,13 +79,11 @@ newState = atomically . newTVar $ State m m m m
     m = Map M.empty
 
 serve :: TVar State -> Request -> IO Response
-serve tvar req | rawPathInfo req == path = success `liftM` readTVarIO tvar
-               | otherwise               = return notFound
+serve tvar req = case rawPathInfo req of
+    "/numbers.json" -> success `liftM` readTVarIO tvar
+    _               -> return notFound
 
-path :: BS.ByteString
-path = "/numbers.json"
-
-success :: State -> Response
+success :: ToJSON a => a -> Response
 success = response status200 . fromLazyByteString . encode
 
 notFound :: Response
@@ -108,4 +106,3 @@ insert key val (Map inner) = Map $! M.alter f key inner
   where
     f (Just x) = Just $ x `append` val
     f Nothing  = Just val
-
