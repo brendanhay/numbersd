@@ -53,9 +53,9 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
   <tr>
-    <td><code>--listen</code></td>
-    <td><code>0.0.0.0:8125</code></td>
-    <td><code>ADDR:PORT</code></td>
+    <td><code>--listeners</code></td>
+    <td><code>udp://0.0.0.0:8125</code></td>
+    <td><code>URI,....</code></td>
     <td>Incoming stats UDP address and port</td>
     <td><code>address</code>, <code>port</code></td>
   </tr>
@@ -63,7 +63,7 @@ the available settings and which statsd configuration keys they pertain to:
    <tr>
     <td><code>--overview</code></td>
     <td></td>
-    <td><code>ADDR:PORT</code></td>
+    <td><code>URI</code></td>
     <td>HTTP address and port for <code>/numbersd.json</code></td>
     <td><code>mgmt_address</code>, <code>mgmt_port</code></td>
   </tr>
@@ -103,7 +103,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--graphites</code></td>
     <td></td>
-    <td><code>ADDR:PORT,...</code></td>
+    <td><code>URI,...</code></td>
     <td>Graphite hosts to deliver metrics to</td>
     <td><code>graphiteHost</code>, <code>graphitePort</code></td>
   </tr>
@@ -111,7 +111,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--broadcasts</code></td>
     <td></td>
-    <td><code>ADDR:PORT,...</code></td>
+    <td><code>URI,...</code></td>
     <td>Hosts to broadcast raw, unaggregated packets to</td>
     <td><code>repeater</code></td>
   </tr>
@@ -119,7 +119,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--downstreams</code></td>
     <td></td>
-    <td><code>ADDR:PORT,...</code></td>
+    <td><code>URI,...</code></td>
     <td>Hosts to forward aggregated, statsd formatted counters to</td>
     <td><code>statsd-backend</code></td>
   </tr>

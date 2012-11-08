@@ -17,13 +17,14 @@ module Numbers.Types (
       Loggable(..)
 
     -- * Exported Types
-    , Addr(..)
+    , Uri(..)
     , Metric(..)
     , Key(..)
 
     -- * Functions
     , append
     , decode
+    , metric
     ) where
 
 import Blaze.ByteString.Builder
@@ -33,7 +34,7 @@ import Control.Monad
 import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
 import Data.List                         (intercalate, intersperse)
-import Data.List.Split                   (splitOn)
+import Data.Maybe
 import Data.Monoid
 import Data.Time.Clock.POSIX
 import Text.Regex.PCRE            hiding (match)
@@ -88,21 +89,29 @@ instance Loggable [Double] where
 
 -- ^
 
-data Addr = Addr BS.ByteString Int
+data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
+         | Udp { _host :: BS.ByteString, _port :: Int }
 
-instance Read Addr where
-    readsPrec _ a = do
-        let (h:p:_) = splitOn ":" a
-        return (Addr (BS.pack h) (read p), "")
+instance Read Uri where
+    readsPrec _ a = return (fromJust . decode uri $ BS.pack a, "")
 
-instance Show Addr where
-    show (Addr h p) = BS.unpack h ++ ":" ++ show p
+instance Loggable Uri where
+    build (Tcp h p) = "tcp://" +++ h +++ ":" +++ p
+    build (Udp h p) = "udp://" +++ h +++ ":" +++ p
 
-instance Loggable Addr where
-    build (Addr h p) = h +++ ":" +++ p
-
-instance Loggable [Addr] where
+instance Loggable [Uri] where
     build = mconcat . intersperse (build ", ") . map build
+
+uri :: Parser Uri
+uri = do
+    s <- PC.takeTill (== ':') <* (string $ BS.pack "://")
+    a <- PC.takeTill (== ':') <* PC.char ':'
+    p <- PC.decimal :: Parser Int
+    return $ case BS.unpack s of
+        "tcp"  -> Tcp a p
+        "udp"  -> Udp a p
+        _      -> error "Unrecognized uri scheme"
+                  -- ^ TODO: investigate purposeful parser failures
 
 data Metric = Counter Double
             | Timer [Double]
@@ -137,11 +146,8 @@ append (Gauge _) g@(Gauge _)   = g
 append (Set x)     (Set y)     = Set $ x `S.union` y
 append _           right       = right
 
-decode :: BS.ByteString -> Maybe (Key, Metric)
-decode bstr = maybeResult $ feed (parse parser bstr) BS.empty
-
-parser :: Parser (Key, Metric)
-parser = do
+metric :: Parser (Key, Metric)
+metric = do
     k <- Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
     v <- PC.double <* PC.char '|'
     t <- PC.anyChar
@@ -154,6 +160,9 @@ parser = do
             _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- Div by zero
   where
     strip s = foldl (flip $ uncurry replace) s unsafe
+
+decode :: Parser a -> BS.ByteString -> Maybe a
+decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
 
 unsafe :: [(Regex, BS.ByteString)]
 unsafe = map (first makeRegex . join (***) BS.pack) rs

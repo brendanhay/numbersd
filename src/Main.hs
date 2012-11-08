@@ -15,6 +15,9 @@ module Main (
       main
     ) where
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Exception      (finally)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe             (catMaybes)
@@ -23,6 +26,9 @@ import Numbers.Log
 import Numbers.Sink
 import Numbers.Socket
 import Numbers.Store
+import Numbers.Types
+
+import qualified Data.ByteString.Char8 as BS
 
 main :: IO ()
 main = withSocketsDo $ do
@@ -36,11 +42,47 @@ main = withSocketsDo $ do
 
     infoL "Sinks started..."
 
-    (s, a) <- openSocket _listener Datagram
-    bindSocket s a
+    tids  <- newMVar []
+    store <- newStore _interval sinks
+    input <- atomically $ newTQueue
 
-    infoL "Listening..."
+    fork tids . runStore store . forever $ do
+        bstr <- liftIO . atomically $ readTQueue input
+        storeMetric bstr
 
-    runStore _interval sinks . forever $ do
-        b <- liftIO $ recv s 1024
-        storeMetric b
+    mapM_ (fork tids . listener input) _listeners
+
+    infoL "Listeners started..."
+
+    wait tids
+
+listener :: TQueue BS.ByteString -> Uri -> IO ()
+listener queue uri = do
+    s <- connect uri
+    infoL $ "Listening on " +++ uri
+    if tcp uri
+     then forever $ do
+         s' <- accept s
+         forkIO . forever $ do
+             b <- recv s'
+             atomically $ writeTQueue queue b
+     else forever $ do
+         b <- recv s
+         atomically $ writeTQueue queue b
+
+fork :: MVar [MVar ()] -> IO () -> IO ThreadId
+fork tids io = do
+    t  <- newEmptyMVar
+    ts <- takeMVar tids
+    putMVar tids $ t:ts
+    forkIO (io `finally` putMVar t ())
+
+wait :: MVar [MVar a] -> IO ()
+wait tids = do
+    ts <- takeMVar tids
+    case ts of
+        []   -> return ()
+        m:ms -> do
+            putMVar tids ms
+            _ <- takeMVar m
+            wait tids

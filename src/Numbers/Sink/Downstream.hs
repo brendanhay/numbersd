@@ -19,6 +19,6 @@ import Numbers.Log
 import Numbers.Sink.Internal
 import Numbers.Types
 
-downstreamSink :: Addr -> IO Sink
+downstreamSink :: Uri -> IO Sink
 downstreamSink _ = runSink $
     flush ^= \(k, v, ts, _) -> infoL $ "Upstream: " +++ k ++& v ++& ts

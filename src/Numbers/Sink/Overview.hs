@@ -64,12 +64,11 @@ instance ToJSON State where
 
 $(makeLens ''State)
 
-overviewSink :: Maybe Addr -> Maybe (IO Sink)
-overviewSink Nothing                = Nothing
-overviewSink (Just a@(Addr _ port)) = Just $ do
+overviewSink :: Maybe Int -> Maybe (IO Sink)
+overviewSink = fmap $ \p -> do
     tvar <- newState
-    void . forkIO $ run port (liftIO . serve tvar)
-    infoL $ ("Overview available at http://" :: BS.ByteString) +++ a
+    void . forkIO $ run p (liftIO . serve tvar)
+    infoL $ BS.pack "Overview available at http://0.0.0.0:" +++ p +++ page
     runSink $ flush ^= \(k, v, _, _) ->
         atomically . modifyTVar tvar $ addState k v
 
@@ -79,9 +78,11 @@ newState = atomically . newTVar $ State m m m m
     m = Map M.empty
 
 serve :: TVar State -> Request -> IO Response
-serve tvar req = case rawPathInfo req of
-    "/numbersd.json" -> success `liftM` readTVarIO tvar
-    _                -> return notFound
+serve tvar req | rawPathInfo req == page = success `liftM` readTVarIO tvar
+               | otherwise               = return notFound
+
+page :: BS.ByteString
+page = "/numbersd.json"
 
 success :: ToJSON a => a -> Response
 success = response status200 . fromLazyByteString . encode

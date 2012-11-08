@@ -11,83 +11,68 @@
 --
 
 module Numbers.Socket (
-    -- * Vanilla Sockets
+    -- * Socket Wrapper
       Socket
-    , SocketType(..)
-    , withSocketsDo
-    , openSocket
+    , tcp
+    , listen
     , accept
-    , bindSocket
-    , close
-    , S.sendAll
-    , S.recv
+    , connect
+    , send
+    , recv
 
-    -- * Retryable Sockets
-    , SocketR
-    , openSocketR
-    , sendR
+    -- * Re-exports
+    , withSocketsDo
     ) where
 
-import Control.Concurrent
-import Control.Exception
-import Data.IORef
-import Network.Socket
+import Control.Monad         (when)
+import Network.Socket hiding (Socket, listen, accept, connect, send, recv)
 import Numbers.Types
 
 import qualified Data.ByteString.Char8     as BS
-import qualified Network.Socket.ByteString as S
+import qualified Network.Socket            as S
+import qualified Network.Socket.ByteString as SS
 
-data SocketR = SocketR
-    { connAddr :: Addr
-    , connType :: SocketType
-    , connRef  :: IORef (Socket, SockAddr)
+data Socket = Socket
+    { _uri  :: Uri
+    , _sock :: S.Socket
+    , _addr :: SockAddr
     }
 
-openSocket :: Addr -> SocketType -> IO (Socket, SockAddr)
-openSocket (Addr host port) stype = do
-    i:_ <- getAddrInfo proto (Just $ BS.unpack host) (Just $ show port)
-    s   <- socket (addrFamily i) stype defaultProtocol
-    return (s, addrAddress i)
+tcp :: Uri -> Bool
+tcp (Tcp _ _) = True
+tcp _         = False
+
+listen :: Uri -> IO Socket
+listen uri = do
+    s@Socket{..} <- open uri
+    setSocketOption _sock ReuseAddr 1
+    bind _sock _addr
+    when (tcp uri) (S.listen _sock maxListenQueue)
+    return s
+
+accept :: Socket -> IO Socket
+accept Socket{..} = do
+    (s, a) <- S.accept _sock
+    return $ Socket _uri s a
+
+connect :: Uri -> IO Socket
+connect uri = do
+    s@Socket{..} <- open uri
+    when (tcp uri) (setSocketOption _sock KeepAlive 1)
+    return s
+
+send :: Socket -> BS.ByteString -> IO ()
+send Socket{..} bstr = SS.sendAllTo _sock bstr _addr
+
+recv :: Socket -> IO BS.ByteString
+recv = flip SS.recv 2048 . _sock
+
+open :: Uri -> IO Socket
+open uri = do
+    i:_ <- getAddrInfo (Just defaultHints) (Just h) (Just p)
+    s   <- socket (addrFamily i) t defaultProtocol
+    return . Socket uri s $ addrAddress i
   where
-    proto = case stype of
-        Datagram -> Just $ defaultHints { addrFlags = [AI_PASSIVE] }
-        _        -> Nothing
-
-openSocketR :: Addr -> SocketType -> IO SocketR
-openSocketR addr typ = do
-    sa <- openSocket addr typ
-    r  <- newIORef sa
-    return $ SocketR addr typ r
-
-sendR :: SocketR -> BS.ByteString -> IO ()
-sendR r@SocketR{..} bstr = retry 3
-  where
-    delay   = 3
-    retry 0 = fail "Out of retries, bitches!"
-    retry n = do
-        (s, a) <- readIORef connRef
-        S.sendAllTo s bstr a `catches`
-            [ Handler (\e -> throw (e :: AsyncException))
-            , Handler (\e -> do
-                  msgR e n delay
-                  threadDelay $ delay * 1000000
-                  reopenR r
-                  retry $ n - 1)
-            ]
-
-msgR :: SomeException -> Int -> Int -> IO ()
-msgR e retries delay = putStrLn $ concat
-    [ show e
-    , " -> "
-    , show retries
-    , " more attempts left, trying in "
-    , show delay
-    , " seconds"
-    ]
-
-reopenR :: SocketR -> IO ()
-reopenR SocketR{..} = do
-    (s, _) <- readIORef connRef
-    close s
-    sa <- openSocket connAddr connType
-    writeIORef connRef sa
+    h = BS.unpack $ _host uri
+    p = show $ _port uri
+    t = if tcp uri then Stream else Datagram

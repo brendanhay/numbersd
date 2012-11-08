@@ -20,10 +20,11 @@ module Numbers.Config (
     , parseConfig
     ) where
 
+import Control.Monad                   (when)
 import Data.Lens.Common
 import Data.Lens.Template
 import Data.List.Split                 (splitOn)
-import Data.Monoid (mempty, mconcat)
+import Data.Monoid                     (mempty, mconcat)
 import Data.Version                    (showVersion)
 import Paths_numbersd                  (version)
 import System.Console.CmdArgs.Explicit
@@ -35,16 +36,16 @@ import Numbers.Types
 import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
-    { _listener       :: Addr
-    , _overview         :: Maybe Addr
+    { _listeners      :: [Uri]
+    , _overview       :: Maybe Int
     , _interval       :: Int
-    , _percentile     :: [Int]
+    , _percentiles    :: [Int]
     , _logEvents      :: [String]
     , _logPath        :: String
-    , _graphites      :: [Addr]
+    , _graphites      :: [Uri]
     , _graphitePrefix :: String
-    , _broadcasts     :: [Addr]
-    , _downstreams    :: [Addr]
+    , _broadcasts     :: [Uri]
+    , _downstreams    :: [Uri]
     }
 
 $(makeLens ''Config)
@@ -52,10 +53,10 @@ $(makeLens ''Config)
 instance Loggable Config where
     build Config{..} = mconcat
         [ build "Configuration: \n"
-        , " -> UDP Listener:    " ++\ _listener
-        , " -> HTTP Overview:     " ++\ _overview
+        , " -> Listeners:       " ++\ _listeners
+        , " -> Overview Port:   " ++\ _overview
         , " -> Flush Interval:  " ++\ _interval
-        , " -> Percentile:      " ++\ _percentile
+        , " -> Percentile:      " ++\ _percentiles
         , " -> Log Events:      " ++\ _logEvents
         , " -> Log Path:        " ++\ _logPath
         , " -> Graphites:       " ++\ _graphites
@@ -67,10 +68,10 @@ instance Loggable Config where
 
 defaultConfig :: Config
 defaultConfig = Config
-    { _listener       = Addr (BS.pack "0.0.0.0") 8125
-    , _overview        = Nothing
+    { _listeners      = [Udp (BS.pack "0.0.0.0") 8125]
+    , _overview       = Nothing
     , _interval       = 10
-    , _percentile     = [90]
+    , _percentiles     = [90]
     , _logEvents      = ["flush"]
     , _logPath        = "stdout"
     , _graphites      = []
@@ -86,7 +87,7 @@ parseConfig = do
     case processValue (flags n) a of
         Help    -> print (helpText [] HelpFormatOne $ flags n) >> exitSuccess
         Version -> print (info n) >> exitSuccess
-        opts    -> infoL opts >> return opts
+        c       -> validate c >> infoL c >> return c
 
 info :: String -> String
 info name = concat
@@ -96,23 +97,28 @@ info name = concat
     , " (C) Brendan Hay <brendan@soundcloud.com> 2012"
     ]
 
+validate :: Config -> IO ()
+validate Config{..} = do
+    check (null _listeners)   "--listeners cannot be blank"
+    check (null _percentiles) "--percentiles cannot be blank"
+    check (null _logPath)     "--log-path cannot be blank"
+    return ()
+  where
+    check p m = when p $ putStrLn m >> exitWith (ExitFailure 1)
+validate _ = return ()
+
 flags :: String -> Mode Config
 flags name = mode name defaultConfig "Numbers"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
-    [ flagReq ["udp"]
-      (one listener)
-      "ADDR:PORT"
-      "Incoming stats UDP address and port"
+    [ flagReq ["listeners"]
+      (many listeners)
+      "[URI]"
+      "Incoming stats address and port combinations"
 
-    , flagReq ["tcp"]
-      (one listener)
-      "ADDR:PORT"
-      "Incoming stats TCP address and port"
-
-    , flagReq ["overview"]
+    , flagReq ["overview-port"]
       (\s o -> Right $ (setL overview . Just $ read s) o)
-      "ADDR:PORT"
-      "HTTP address and port for /numbers.json"
+      "URI"
+      "HTTP port to serve /numbers.json on"
 
     , flagReq ["interval"]
       (one interval)
@@ -120,7 +126,7 @@ flags name = mode name defaultConfig "Numbers"
       "Interval between key flushes to subscribed sinks"
 
     , flagReq ["percentiles"]
-      (many percentile)
+      (many percentiles)
       "[INT]"
       "Calculate the Nth percentile(s) for timers"
 
@@ -136,7 +142,7 @@ flags name = mode name defaultConfig "Numbers"
 
     , flagReq ["graphites"]
       (many graphites)
-      "[ADDR:PORT]"
+      "[URI]"
       "Graphite hosts to deliver metrics to"
 
     , flagReq ["graphite-prefix"]
@@ -146,12 +152,12 @@ flags name = mode name defaultConfig "Numbers"
 
     , flagReq ["broadcasts"]
       (many broadcasts)
-      "[ADDR:PORT]"
+      "[URI]"
       "Hosts to broadcast raw unaggregated packets to"
 
     , flagReq ["downstreams"]
       (many downstreams)
-      "[ADDR:PORT]"
+      "[URI]"
       "Hosts to forward aggregated counters to"
 
     , flagNone ["help", "h"]

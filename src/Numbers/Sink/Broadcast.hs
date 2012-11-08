@@ -20,9 +20,7 @@ import Numbers.Sink.Internal
 import Numbers.Socket
 import Numbers.Types
 
-broadcastSink :: Addr -> IO Sink
-broadcastSink addr = do
-    r <- openSocketR addr Datagram
+broadcastSink :: Uri -> IO Sink
+broadcastSink uri = do
     runSink $ receive ^= \b -> do
-        infoL $ "Broadcast: " +++ b +++ " to " +++ addr
-        sendR r b
+        infoL $ "Broadcast: " +++ b +++ " to " +++ uri
