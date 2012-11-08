@@ -1,6 +1,14 @@
 #!/bin/bash
 
-BUCKETS=(aardvark potato shinyunicorn flabbergasted supercalifragilistic vertigo pork random rubber parrot muffin antidisestablishmentarianism seven shishkebap cheesecake ballsacks)
+RANDOM=$$;
+WORDFILE=/usr/share/dict/words
+LINES=30 # $(cat $WORDFILE | wc -l)
+
+word() {
+    rnum=$((RANDOM*RANDOM%$LINES+1))
+    printf `sed -n "$rnum p" $WORDFILE`
+}
+
 TYPES=(g c s ms)
 
 usage() {
@@ -24,7 +32,7 @@ emit() {
     values=(1 $(rand 10) $(rand 10000))
     samples=('' "|@0.${RANDOM:0:2}" "")
     rate=$(sample samples[@])
-    metric="$(sample BUCKETS[@]):$(sample values[@])|$(sample TYPES[@])$rate"
+    metric="$(word):$(sample values[@])|$(sample TYPES[@])$rate"
 
     echo $metric
     echo -n $metric | nc -u ${HOST-"127.0.0.1"} ${PORT-"8125"} -c
