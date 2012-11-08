@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Sink
+-- Module      : Numbers.Sink.Downstream
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,28 +10,16 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink (
-    -- * Events
-      Event(..)
-
-    -- * Opaque
-    , Sink
-
-    -- * Sinks
-    , logSink
-    , statusSink
-    , graphiteSink
-    , broadcastSink
-    , downstreamSink
-
-    -- * Functions
-    , emit
-    , runSink
+module Numbers.Sink.Downstream (
+      downstreamSink
     ) where
 
+import Data.Lens.Common
+import Numbers.Log
 import Numbers.Sink.Internal
-import Numbers.Sink.Log
-import Numbers.Sink.Status
-import Numbers.Sink.Graphite
-import Numbers.Sink.Broadcast
-import Numbers.Sink.Downstream
+import Numbers.Socket
+import Numbers.Types
+
+downstreamSink :: Addr -> IO Sink
+downstreamSink addr = newSink $
+    flush ^= \(k, v, ts, n) -> infoL $ "Upstream: " +++ k ++& v ++& ts

@@ -21,31 +21,23 @@ import Data.Maybe             (catMaybes)
 import Numbers.Config
 import Numbers.Log
 import Numbers.Sink
-import Numbers.Sink.Log
-import Numbers.Sink.Status
 import Numbers.Socket
 import Numbers.Store
 
 main :: IO ()
 main = withSocketsDo $ do
-    Options{..} <- parseOptions
+    Config{..} <- parseConfig
 
-    sinks <- sequence $ catMaybes [logSink _logEvents _logPath, statusSink _status]
-        ++ map (graphiteSink _graphitePrefix) _graphite
-        ++ map broadcastSink _broadcast
-        ++ map downstreamSink _downstream
+    sinks <- sequence $
+        catMaybes [logSink _logEvents _logPath, statusSink _status]
+            ++ map (graphiteSink _graphitePrefix) _graphite
+            ++ map broadcastSink _broadcast
+            ++ map downstreamSink _downstream
 
     infoL "Sinks started..."
 
     (s, a) <- openSocket _listener Datagram
     bindSocket s a
-
--- start management server here
--- use tvar around sinks inside the Numbers transformer to
--- update? change to a statet?
-
--- create the tvar here and pass to both runManagement
--- and runServer?
 
     infoL "Listening..."
 

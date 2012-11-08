@@ -30,7 +30,7 @@ import Network.HTTP.Types        (status200, status404)
 import Network.HTTP.Types.Status (Status)
 import Numbers.Log
 import Numbers.Types
-import Numbers.Sink
+import Numbers.Sink.Internal
 
 import Data.Text.Encoding                (decodeUtf8)
 
@@ -70,7 +70,7 @@ statusSink (Just a@(Addr _ port)) = Just $ do
     tvar <- newState
     void . forkIO $ run port (liftIO . serve tvar)
     infoL $ ("Status available at http://" :: BS.ByteString) +++ a +++ path
-    runSink $ flush ^= \k v _ _ ->
+    newSink $ flush ^= \(k, v, _, _) ->
         atomically . modifyTVar tvar $ addState k v
 
 newState :: IO (TVar State)

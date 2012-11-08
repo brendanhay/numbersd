@@ -14,10 +14,10 @@
 
 module Numbers.Config (
     -- * Exported Types
-      Options(..)
+      Config(..)
 
     -- * Functions
-    , parseOptions
+    , parseConfig
     ) where
 
 import Data.Lens.Common
@@ -34,7 +34,7 @@ import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 
-data Options = Help | Version | Options
+data Config = Help | Version | Config
     { _listener       :: Addr
     , _status         :: Maybe Addr
     , _interval       :: Int
@@ -47,10 +47,10 @@ data Options = Help | Version | Options
     , _downstream     :: [Addr]
     }
 
-$(makeLens ''Options)
+$(makeLens ''Config)
 
-instance Loggable Options where
-    build Options{..} = mconcat
+instance Loggable Config where
+    build Config{..} = mconcat
         [ build "Configuration: \n"
         , " -> UDP Listener:    " ++\ _listener
         , " -> HTTP Status:     " ++\ _status
@@ -65,8 +65,8 @@ instance Loggable Options where
         ]
     build _ = mempty
 
-defaultOptions :: Options
-defaultOptions = Options
+defaultConfig :: Config
+defaultConfig = Config
     { _listener       = Addr (BS.pack "0.0.0.0") 8125
     , _status         = Nothing
     , _interval       = 10
@@ -79,8 +79,8 @@ defaultOptions = Options
     , _downstream     = []
     }
 
-parseOptions :: IO Options
-parseOptions = do
+parseConfig :: IO Config
+parseConfig = do
     a <- getArgs
     n <- getProgName
     case processValue (flags n) a of
@@ -96,8 +96,8 @@ info name = concat
     , " (C) Brendan Hay <brendan@soundcloud.com> 2012"
     ]
 
-flags :: String -> Mode Options
-flags name = mode name defaultOptions "Numbers"
+flags :: String -> Mode Config
+flags name = mode name defaultConfig "Numbers"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
     [ flagReq ["listen"]
       (one listener)

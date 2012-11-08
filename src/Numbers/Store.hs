@@ -24,7 +24,7 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Maybe
 import Data.Time.Clock.POSIX
-import Numbers.Sink           hiding (flush)
+import Numbers.Sink
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
@@ -40,6 +40,7 @@ type Store a = ReaderT State IO a
 
 runStore :: Int -> [Sink] -> Store a -> IO a
 runStore n sinks vodki = do
+    mapM_ runSink sinks
     s <- State n sinks <$> atomically (newTVar M.empty)
     runReaderT vodki s
 

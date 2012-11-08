@@ -17,7 +17,7 @@ module Numbers.Sink.Log (
 import Data.List        (intercalate)
 import Data.Lens.Common
 import Numbers.Log
-import Numbers.Sink
+import Numbers.Sink.Internal
 import Numbers.Types
 
 logSink :: [String] -> String -> Maybe (IO Sink)
@@ -25,11 +25,11 @@ logSink [] _      = Nothing
 logSink evts path = Just $ do
     l <- newLogger path
     infoL $ "Logging " +++ intercalate ", " evts +++ " events"
-    runSink $ \s -> foldl f s (ts l)
+    newSink $ \s -> foldl f s (ts l)
   where
     f s (k, g) = if k `elem` evts then g s else s
     ts l = [ ("receive", receive ^= \v -> l $ "Receive: " +++ v)
            , ("invalid", invalid ^= \v -> l $ "Invalid: " +++ v)
-           , ("parse", parse   ^= \k v -> l $ "Parse: " +++ k ++& v)
-           , ("flush", flush   ^= \k v _ _ -> l $ "Flush: " +++ k ++& v)
+           , ("parse", parse   ^= \(k, v) -> l $ "Parse: " +++ k ++& v)
+           , ("flush", flush   ^= \(k, v, _, _) -> l $ "Flush: " +++ k ++& v)
            ]

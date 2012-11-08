@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Sink
+-- Module      : Numbers.Sink.Graphite
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,28 +10,15 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink (
-    -- * Events
-      Event(..)
-
-    -- * Opaque
-    , Sink
-
-    -- * Sinks
-    , logSink
-    , statusSink
-    , graphiteSink
-    , broadcastSink
-    , downstreamSink
-
-    -- * Functions
-    , emit
-    , runSink
+module Numbers.Sink.Graphite (
+      graphiteSink
     ) where
 
+import Data.Lens.Common
+import Numbers.Log
 import Numbers.Sink.Internal
-import Numbers.Sink.Log
-import Numbers.Sink.Status
-import Numbers.Sink.Graphite
-import Numbers.Sink.Broadcast
-import Numbers.Sink.Downstream
+import Numbers.Types
+
+graphiteSink :: String -> Addr -> IO Sink
+graphiteSink _ _ = newSink $
+    flush ^= \(k, v, ts, _) -> infoL $ "Graphite: " +++ k ++& v ++& ts
