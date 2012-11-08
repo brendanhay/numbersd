@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 -- |
--- Module      : Numbers.Sink.Status
+-- Module      : Numbers.Sink.Overview
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -12,8 +12,8 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink.Status (
-      statusSink
+module Numbers.Sink.Overview (
+      overviewSink
     ) where
 
 import Blaze.ByteString.Builder  (Builder, copyByteString, fromLazyByteString)
@@ -64,12 +64,12 @@ instance ToJSON State where
 
 $(makeLens ''State)
 
-statusSink :: Maybe Addr -> Maybe (IO Sink)
-statusSink Nothing               = Nothing
-statusSink (Just a@(Addr _ port)) = Just $ do
+overviewSink :: Maybe Addr -> Maybe (IO Sink)
+overviewSink Nothing                = Nothing
+overviewSink (Just a@(Addr _ port)) = Just $ do
     tvar <- newState
     void . forkIO $ run port (liftIO . serve tvar)
-    infoL $ ("Status available at http://" :: BS.ByteString) +++ a
+    infoL $ ("Overview available at http://" :: BS.ByteString) +++ a
     runSink $ flush ^= \(k, v, _, _) ->
         atomically . modifyTVar tvar $ addState k v
 
@@ -90,7 +90,7 @@ notFound :: Response
 notFound = response status404 $ copyByteString "{\"error\": \"Not Found\"}"
 
 response :: Status -> Builder -> Response
-response status = ResponseBuilder status [("Content-Type", "application/json")]
+response code = ResponseBuilder code [("Content-Type", "application/json")]
 
 addState :: Key -> Metric -> State -> State
 addState key val = l $ insert key val

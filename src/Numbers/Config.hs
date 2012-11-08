@@ -36,7 +36,7 @@ import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
     { _listener       :: Addr
-    , _status         :: Maybe Addr
+    , _overview         :: Maybe Addr
     , _interval       :: Int
     , _percentile     :: [Int]
     , _logEvents      :: [String]
@@ -53,7 +53,7 @@ instance Loggable Config where
     build Config{..} = mconcat
         [ build "Configuration: \n"
         , " -> UDP Listener:    " ++\ _listener
-        , " -> HTTP Status:     " ++\ _status
+        , " -> HTTP Overview:     " ++\ _overview
         , " -> Flush Interval:  " ++\ _interval
         , " -> Percentile:      " ++\ _percentile
         , " -> Log Events:      " ++\ _logEvents
@@ -68,7 +68,7 @@ instance Loggable Config where
 defaultConfig :: Config
 defaultConfig = Config
     { _listener       = Addr (BS.pack "0.0.0.0") 8125
-    , _status         = Nothing
+    , _overview        = Nothing
     , _interval       = 10
     , _percentile     = [90]
     , _logEvents      = ["flush"]
@@ -99,13 +99,18 @@ info name = concat
 flags :: String -> Mode Config
 flags name = mode name defaultConfig "Numbers"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
-    [ flagReq ["listen"]
+    [ flagReq ["udp"]
       (one listener)
       "ADDR:PORT"
       "Incoming stats UDP address and port"
 
-    , flagReq ["status"]
-      (\s o -> Right $ (setL status . Just $ read s) o)
+    , flagReq ["tcp"]
+      (one listener)
+      "ADDR:PORT"
+      "Incoming stats TCP address and port"
+
+    , flagReq ["overview"]
+      (\s o -> Right $ (setL overview . Just $ read s) o)
       "ADDR:PORT"
       "HTTP address and port for /numbers.json"
 
