@@ -80,8 +80,8 @@ newState = atomically . newTVar $ State m m m m
 
 serve :: TVar State -> Request -> IO Response
 serve tvar req = case rawPathInfo req of
-    "/numbers.json" -> success `liftM` readTVarIO tvar
-    _               -> return notFound
+    "/numbersd.json" -> success `liftM` readTVarIO tvar
+    _                -> return notFound
 
 success :: ToJSON a => a -> Response
 success = response status200 . fromLazyByteString . encode

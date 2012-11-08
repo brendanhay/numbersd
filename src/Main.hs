@@ -30,9 +30,9 @@ main = withSocketsDo $ do
 
     sinks <- sequence $
         catMaybes [logSink _logEvents _logPath, statusSink _status]
-            ++ map (graphiteSink _graphitePrefix) _graphite
-            ++ map broadcastSink _broadcast
-            ++ map downstreamSink _downstream
+            ++ map (graphiteSink _graphitePrefix) _graphites
+            ++ map broadcastSink _broadcasts
+            ++ map downstreamSink _downstreams
 
     infoL "Sinks started..."
 

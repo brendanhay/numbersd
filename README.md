@@ -53,18 +53,18 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
   <tr>
-    <td><code>--server</code></td>
+    <td><code>--listen</code></td>
     <td><code>0.0.0.0:8125</code></td>
-    <td><code>HOST:PORT</code></td>
+    <td><code>ADDR:PORT</code></td>
     <td>Incoming stats UDP address and port</td>
     <td><code>address</code>, <code>port</code></td>
   </tr>
 
    <tr>
-    <td><code>--management</code></td>
-    <td><code>0.0.0.0:8126</code></td>
-    <td><code>HOST:PORT</code></td>
-    <td>Management interface TCP address and port</td>
+    <td><code>--status</code></td>
+    <td></td>
+    <td><code>ADDR:PORT</code></td>
+    <td>HTTP address and port for /numbersd.json</td>
     <td><code>mgmt_address</code>, <code>mgmt_port</code></td>
   </tr>
 
@@ -85,8 +85,8 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
    <tr>
-    <td><code>--log</code></td>
-    <td></td>
+    <td><code>--log-events</code></td>
+    <td><code>flush</code></td>
     <td><code>receive,...</code></td>
     <td>Combination of receive, invalid, parse, or flush events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
@@ -101,25 +101,25 @@ the available settings and which statsd configuration keys they pertain to:
   </tr>
 
   <tr>
-    <td><code>--graphite</code></td>
+    <td><code>--graphites</code></td>
     <td></td>
-    <td><code>HOST:PORT,...</code></td>
+    <td><code>ADDR:PORT,...</code></td>
     <td>Graphite hosts to deliver metrics to</td>
     <td><code>graphiteHost</code>, <code>graphitePort</code></td>
   </tr>
 
   <tr>
-    <td><code>--broadcast</code></td>
+    <td><code>--broadcasts</code></td>
     <td></td>
-    <td><code>HOST:PORT,...</code></td>
+    <td><code>ADDR:PORT,...</code></td>
     <td>Hosts to broadcast raw, unaggregated packets to</td>
     <td><code>repeater</code></td>
   </tr>
 
   <tr>
-    <td><code>--downstream</code></td>
+    <td><code>--downstreams</code></td>
     <td></td>
-    <td><code>HOST:PORT,...</code></td>
+    <td><code>ADDR:PORT,...</code></td>
     <td>Hosts to forward aggregated, statsd formatted counters to</td>
     <td><code>statsd-backend</code></td>
   </tr>

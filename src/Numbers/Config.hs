@@ -41,10 +41,10 @@ data Config = Help | Version | Config
     , _percentile     :: [Int]
     , _logEvents      :: [String]
     , _logPath        :: String
-    , _graphite       :: [Addr]
+    , _graphites      :: [Addr]
     , _graphitePrefix :: String
-    , _broadcast      :: [Addr]
-    , _downstream     :: [Addr]
+    , _broadcasts     :: [Addr]
+    , _downstreams    :: [Addr]
     }
 
 $(makeLens ''Config)
@@ -58,10 +58,10 @@ instance Loggable Config where
         , " -> Percentile:      " ++\ _percentile
         , " -> Log Events:      " ++\ _logEvents
         , " -> Log Path:        " ++\ _logPath
-        , " -> Graphite:        " ++\ _graphite
+        , " -> Graphites:       " ++\ _graphites
         , " -> Graphite Prefix: " ++\ _graphitePrefix
-        , " -> Broadcast:       " ++\ _broadcast
-        , " -> Downstream:      " +++ _downstream
+        , " -> Broadcasts:      " ++\ _broadcasts
+        , " -> Downstreams:     " +++ _downstreams
         ]
     build _ = mempty
 
@@ -73,10 +73,10 @@ defaultConfig = Config
     , _percentile     = [90]
     , _logEvents      = ["flush"]
     , _logPath        = "stdout"
-    , _graphite       = []
+    , _graphites      = []
     , _graphitePrefix = "stats"
-    , _broadcast      = []
-    , _downstream     = []
+    , _broadcasts     = []
+    , _downstreams    = []
     }
 
 parseConfig :: IO Config
@@ -114,12 +114,12 @@ flags name = mode name defaultConfig "Numbers"
       "INT"
       "Interval between key flushes to subscribed sinks"
 
-    , flagReq ["percentile"]
+    , flagReq ["percentiles"]
       (many percentile)
       "[INT]"
       "Calculate the Nth percentile(s) for timers"
 
-    , flagReq ["log"]
+    , flagReq ["log-events"]
       (\s o -> Right $ (logEvents ^= splitOn "," s) o)
       "[EVENT]"
       "Lomany [receive,invalid,parse,flush] events"
@@ -129,8 +129,8 @@ flags name = mode name defaultConfig "Numbers"
       "PATH"
       "Lomany file path, or stdout"
 
-    , flagReq ["graphite"]
-      (many graphite)
+    , flagReq ["graphites"]
+      (many graphites)
       "[ADDR:PORT]"
       "Graphite hosts to deliver metrics to"
 
@@ -139,13 +139,13 @@ flags name = mode name defaultConfig "Numbers"
       "STRING"
       "Prepended to all keys flushed to graphite"
 
-    , flagReq ["broadcast"]
-      (many broadcast)
+    , flagReq ["broadcasts"]
+      (many broadcasts)
       "[ADDR:PORT]"
       "Hosts to broadcast raw unaggregated packets to"
 
-    , flagReq ["downstream"]
-      (many downstream)
+    , flagReq ["downstreams"]
+      (many downstreams)
       "[ADDR:PORT]"
       "Hosts to forward aggregated counters to"
 
