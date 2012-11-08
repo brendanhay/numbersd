@@ -12,7 +12,7 @@ word() {
 TYPES=(g c s ms)
 
 usage() {
-    echo "Usage: -h [host] -p [port]"
+    echo "Usage: -l [port]"
     exit 1
 }
 
@@ -26,6 +26,16 @@ sample() {
     printf $'%s\n' "${ary[$(($(rand "${#ary[*]}")+1))]}"
 }
 
+while getopts ":l:" opt
+do
+    case $opt in
+        l) PORT=$OPTARG;;
+        *) usage;;
+    esac
+done
+
+echo "generate.sh -l $PORT"
+
 emit() {
     local samples rate metric
 
@@ -37,15 +47,6 @@ emit() {
     echo $metric
     echo -n $metric | nc -u ${HOST-"127.0.0.1"} ${PORT-"8125"} -c
 }
-
-while getopts ":h:p" opt
-do
-    case $opt in
-        h) HOST=$OPTARG;;
-        p) PORT=$OPTARG;;
-        *) usage;;
-    esac
-done
 
 while true
 do
