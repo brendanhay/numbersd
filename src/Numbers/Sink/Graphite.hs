@@ -20,5 +20,5 @@ import Numbers.Sink.Internal
 import Numbers.Types
 
 graphiteSink :: String -> Addr -> IO Sink
-graphiteSink _ _ = newSink $
+graphiteSink _ _ = runSink $
     flush ^= \(k, v, ts, _) -> infoL $ "Graphite: " +++ k ++& v ++& ts

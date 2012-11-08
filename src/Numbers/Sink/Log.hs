@@ -25,7 +25,7 @@ logSink [] _      = Nothing
 logSink evts path = Just $ do
     l <- newLogger path
     infoL $ "Logging " +++ intercalate ", " evts +++ " events"
-    newSink $ \s -> foldl f s (ts l)
+    runSink $ \s -> foldl f s (ts l)
   where
     f s (k, g) = if k `elem` evts then g s else s
     ts l = [ ("receive", receive ^= \v -> l $ "Receive: " +++ v)

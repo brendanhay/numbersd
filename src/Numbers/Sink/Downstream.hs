@@ -17,9 +17,8 @@ module Numbers.Sink.Downstream (
 import Data.Lens.Common
 import Numbers.Log
 import Numbers.Sink.Internal
-import Numbers.Socket
 import Numbers.Types
 
 downstreamSink :: Addr -> IO Sink
-downstreamSink addr = newSink $
-    flush ^= \(k, v, ts, n) -> infoL $ "Upstream: " +++ k ++& v ++& ts
+downstreamSink _ = runSink $
+    flush ^= \(k, v, ts, _) -> infoL $ "Upstream: " +++ k ++& v ++& ts

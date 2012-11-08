@@ -119,10 +119,10 @@ instance ToJSON Metric where
 
 instance Loggable Metric where
     build v = case v of
-        (Counter n) -> build n
-        (Timer ns)  -> build ns
-        (Gauge n)   -> build n
-        (Set ss)    -> build $ S.toAscList ss
+        (Counter n) -> "Counter " +++ n
+        (Timer ns)  -> "Timer " +++ ns
+        (Gauge n)   -> "Gauge " +++ n
+        (Set ss)    -> "Set " +++ S.toAscList ss
 
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord)

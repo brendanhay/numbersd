@@ -26,7 +26,6 @@ module Numbers.Sink (
 
     -- * Functions
     , emit
-    , runSink
     ) where
 
 import Numbers.Sink.Internal

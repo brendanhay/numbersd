@@ -70,7 +70,7 @@ statusSink (Just a@(Addr _ port)) = Just $ do
     tvar <- newState
     void . forkIO $ run port (liftIO . serve tvar)
     infoL $ ("Status available at http://" :: BS.ByteString) +++ a +++ path
-    newSink $ flush ^= \(k, v, _, _) ->
+    runSink $ flush ^= \(k, v, _, _) ->
         atomically . modifyTVar tvar $ addState k v
 
 newState :: IO (TVar State)

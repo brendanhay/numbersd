@@ -23,6 +23,6 @@ import Numbers.Types
 broadcastSink :: Addr -> IO Sink
 broadcastSink addr = do
     r <- openSocketR addr Datagram
-    newSink $ receive ^= \b -> do
+    runSink $ receive ^= \b -> do
         infoL $ "Broadcast: " +++ b +++ " to " +++ addr
         sendR r b

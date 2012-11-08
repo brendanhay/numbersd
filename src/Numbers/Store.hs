@@ -40,7 +40,6 @@ type Store a = ReaderT State IO a
 
 runStore :: Int -> [Sink] -> Store a -> IO a
 runStore n sinks vodki = do
-    mapM_ runSink sinks
     s <- State n sinks <$> atomically (newTVar M.empty)
     runReaderT vodki s
 

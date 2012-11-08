@@ -19,7 +19,6 @@ module Numbers.Sink.Internal (
     -- * Opaque
     , Sink(..)
     , emit
-    , newSink
     , runSink
 
     -- * Lenses
@@ -57,13 +56,19 @@ $(makeLens ''Sink)
 emit :: [Sink] -> Event -> IO ()
 emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (_events s) evt)
 
-newSink :: (Sink -> a) -> IO a
+runSink :: (Sink -> Sink) -> IO Sink
+runSink lens = do
+    s <- newSink lens
+    forkSink s
+    return s
+
+newSink :: (Sink -> Sink) -> IO Sink
 newSink = flip liftM $ Sink f f f f <$> atomically newTQueue
   where
     f _ = return ()
 
-runSink :: Sink -> IO ()
-runSink Sink{..} = void . forkIO . forever $ do
+forkSink :: Sink -> IO ()
+forkSink Sink{..} = void . forkIO . forever $ do
     e <- atomically $ readTQueue _events
     case e of
         (Receive bs)     -> _receive bs
