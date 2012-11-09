@@ -104,7 +104,7 @@ instance Loggable [Uri] where
 
 uri :: Parser Uri
 uri = do
-    s <- PC.takeTill (== ':') <* (string $ BS.pack "://")
+    s <- PC.takeTill (== ':') <* string (BS.pack "://")
     a <- PC.takeTill (== ':') <* PC.char ':'
     p <- PC.decimal :: Parser Int
     return $ case BS.unpack s of

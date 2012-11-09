@@ -41,7 +41,6 @@ data Config = Help | Version | Config
     , _interval       :: Int
     , _percentiles    :: [Int]
     , _logEvents      :: [String]
-    , _logPath        :: String
     , _graphites      :: [Uri]
     , _graphitePrefix :: String
     , _broadcasts     :: [Uri]
@@ -58,7 +57,6 @@ instance Loggable Config where
         , " -> Flush Interval:  " ++\ _interval
         , " -> Percentile:      " ++\ _percentiles
         , " -> Log Events:      " ++\ _logEvents
-        , " -> Log Path:        " ++\ _logPath
         , " -> Graphites:       " ++\ _graphites
         , " -> Graphite Prefix: " ++\ _graphitePrefix
         , " -> Broadcasts:      " ++\ _broadcasts
@@ -73,7 +71,6 @@ defaultConfig = Config
     , _interval       = 10
     , _percentiles     = [90]
     , _logEvents      = ["flush"]
-    , _logPath        = "stdout"
     , _graphites      = []
     , _graphitePrefix = "stats"
     , _broadcasts     = []
@@ -101,7 +98,6 @@ validate :: Config -> IO ()
 validate Config{..} = do
     check (null _listeners)   "--listeners cannot be blank"
     check (null _percentiles) "--percentiles cannot be blank"
-    check (null _logPath)     "--log-path cannot be blank"
     return ()
   where
     check p m = when p $ putStrLn m >> exitWith (ExitFailure 1)
@@ -133,12 +129,7 @@ flags name = mode name defaultConfig "Numbers"
     , flagReq ["log-events"]
       (\s o -> Right $ (logEvents ^= splitOn "," s) o)
       "[EVENT]"
-      "Lomany [receive,invalid,parse,flush] events"
-
-    , flagReq ["log-path"]
-      (\s o -> Right $ (logPath ^= s) o)
-      "PATH"
-      "Lomany file path, or stdout"
+      "Log [receive,invalid,parse,flush] events"
 
     , flagReq ["graphites"]
       (many graphites)

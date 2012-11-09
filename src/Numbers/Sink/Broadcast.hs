@@ -21,6 +21,6 @@ import Numbers.Socket
 import Numbers.Types
 
 broadcastSink :: Uri -> IO Sink
-broadcastSink uri = do
-    runSink $ receive ^= \b -> do
+broadcastSink uri =
+    runSink $ receive ^= \b ->
         infoL $ "Broadcast: " +++ b +++ " to " +++ uri

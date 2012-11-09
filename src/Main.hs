@@ -35,7 +35,7 @@ main = withSocketsDo $ do
     Config{..} <- parseConfig
 
     sinks <- sequence $
-        catMaybes [logSink _logEvents _logPath, overviewSink _overview]
+        catMaybes [logSink _logEvents, overviewSink _overview]
             ++ map (graphiteSink _graphitePrefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
@@ -44,7 +44,7 @@ main = withSocketsDo $ do
 
     tids  <- newMVar []
     store <- newStore _interval sinks
-    input <- atomically $ newTQueue
+    input <- atomically newTQueue
 
     fork tids . runStore store . forever $ do
         bstr <- liftIO . atomically $ readTQueue input
@@ -57,18 +57,12 @@ main = withSocketsDo $ do
     wait tids
 
 listener :: TQueue BS.ByteString -> Uri -> IO ()
-listener queue uri = do
-    s <- connect uri
-    infoL $ "Listening on " +++ uri
-    if tcp uri
-     then forever $ do
-         s' <- accept s
-         forkIO . forever $ do
-             b <- recv s'
-             atomically $ writeTQueue queue b
-     else forever $ do
-         b <- recv s
-         atomically $ writeTQueue queue b
+listener queue uri | tcp uri   = sock spawn
+                   | otherwise = sock push
+  where
+    sock f  = listen uri >>= forever . f
+    spawn s = (forkIO . forever . push) `liftM` accept s
+    push s  = (atomically . writeTQueue queue) `liftM` recv s
 
 fork :: MVar [MVar ()] -> IO () -> IO ThreadId
 fork tids io = do

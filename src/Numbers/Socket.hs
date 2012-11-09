@@ -26,6 +26,7 @@ module Numbers.Socket (
 
 import Control.Monad         (when)
 import Network.Socket hiding (Socket, listen, accept, connect, send, recv)
+import Numbers.Log
 import Numbers.Types
 
 import qualified Data.ByteString.Char8     as BS
@@ -48,6 +49,7 @@ listen uri = do
     setSocketOption _sock ReuseAddr 1
     bind _sock _addr
     when (tcp uri) (S.listen _sock maxListenQueue)
+    infoL $ "Listening on " +++ uri
     return s
 
 accept :: Socket -> IO Socket
@@ -59,6 +61,8 @@ connect :: Uri -> IO Socket
 connect uri = do
     s@Socket{..} <- open uri
     when (tcp uri) (setSocketOption _sock KeepAlive 1)
+    S.connect _sock _addr
+    infoL $ "Connected to " +++ uri
     return s
 
 send :: Socket -> BS.ByteString -> IO ()

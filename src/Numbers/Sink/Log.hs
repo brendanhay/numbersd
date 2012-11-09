@@ -20,12 +20,11 @@ import Numbers.Log
 import Numbers.Sink.Internal
 import Numbers.Types
 
-logSink :: [String] -> String -> Maybe (IO Sink)
-logSink [] _      = Nothing
-logSink evts path = Just $ do
-    l <- newLogger path
+logSink :: [String] -> Maybe (IO Sink)
+logSink []   = Nothing
+logSink evts = Just $ do
     infoL $ "Logging " +++ intercalate ", " evts +++ " events"
-    runSink $ \s -> foldl f s (ts l)
+    runSink $ \s -> foldl f s (ts infoL)
   where
     f s (k, g) = if k `elem` evts then g s else s
     ts l = [ ("receive", receive ^= \v -> l $ "Receive: " +++ v)
