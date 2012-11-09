@@ -106,57 +106,39 @@ validate _ = return ()
 flags :: String -> Mode Config
 flags name = mode name defaultConfig "Numbers"
     (flagArg (\x _ -> Left $ "Unexpected argument " ++ x) "")
-    [ flagReq ["listeners"]
-      (many listeners)
-      "[URI]"
+    [ flagReq ["listeners"] (many listeners) "[URI]"
       "Incoming stats address and port combinations"
 
-    , flagReq ["overview"]
-      (\s o -> Right $ (setL overviewPort . Just $ read s) o)
-      "PORT"
+    , flagReq ["overview"] (parse (setL overviewPort . Just . read)) "PORT"
       "HTTP port to serve /numbers.json on"
 
-    , flagReq ["interval"]
-      (one interval)
-      "INT"
+    , flagReq ["interval"] (one interval) "INT"
       "Interval between key flushes to subscribed sinks"
 
-    , flagReq ["percentiles"]
-      (many percentiles)
-      "[INT]"
+    , flagReq ["percentiles"] (many percentiles) "[INT]"
       "Calculate the Nth percentile(s) for timers"
 
-    , flagReq ["log"]
-      (\s o -> Right $ (logEvents ^= splitOn "," s) o)
-      "[EVENT]"
+    , flagReq ["events"] (parse (setL logEvents . splitOn ",")) "[EVENT]"
       "Log [receive,invalid,parse,flush] events"
 
-    , flagReq ["graphites"]
-      (many graphites)
-      "[URI]"
+    , flagReq ["graphites"] (many graphites) "[URI]"
       "Graphite hosts to deliver metrics to"
 
-    , flagReq ["graphite-prefix"]
-      (many graphitePrefix)
-      "STRING"
+    , flagReq ["graphite-prefix"] (many graphitePrefix) "STRING"
       "Prepended to all keys flushed to graphite"
 
-    , flagReq ["broadcasts"]
-      (many broadcasts)
-      "[URI]"
+    , flagReq ["broadcasts"] (many broadcasts) "[URI]"
       "Hosts to broadcast raw unaggregated packets to"
 
-    , flagReq ["downstreams"]
-      (many downstreams)
-      "[URI]"
+    , flagReq ["downstreams"] (many downstreams) "[URI]"
       "Hosts to forward aggregated counters to"
 
-    , flagNone ["help", "h"]
-      (\_ -> Help)
+    , flagNone ["help", "h"] (\_ -> Help)
       "Display this help message"
 
     , flagVersion $ \_ -> Version
     ]
   where
-    one l s  = Right . setL l (read s)
-    many l s = Right . (setL l . map read $ splitOn "," s)
+    one l  = parse (setL l . read)
+    many l = parse (setL l . map read . splitOn ",")
+    parse f s = Right . (f s)
