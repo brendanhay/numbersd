@@ -140,6 +140,6 @@ flags name = mode name defaultConfig "Numbers"
     , flagVersion $ \_ -> Version
     ]
   where
-    one l  = parse (setL l . read)
-    many l = parse (setL l . map read . splitOn ",")
-    parse f s = Right . (f s)
+    one  l    = parse (setL l . read)
+    many l    = parse (setL l . map read . splitOn ",")
+    parse f s = Right . f s

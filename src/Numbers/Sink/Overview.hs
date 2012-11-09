@@ -47,37 +47,49 @@ instance ToJSON Map where
             , "timestamp" .= decodeUtf8 "0"
             ]
 
-data State = State
+data Overview = Overview
     { _counters :: Map
     , _timers   :: Map
     , _gauges   :: Map
     , _sets     :: Map
     }
 
-instance ToJSON State where
-    toJSON State{..} = object
+instance ToJSON Overview where
+    toJSON Overview{..} = object
         [ "counters" .= _counters
         , "timers"   .= _timers
         , "gauges"   .= _gauges
         , "sets"     .= _sets
         ]
 
-$(makeLens ''State)
+$(makeLens ''Overview)
 
 overviewSink :: Maybe Int -> Maybe (IO Sink)
 overviewSink = fmap $ \p -> do
-    tvar <- newState
+    tvar <- newOverview
     void . forkIO $ run p (liftIO . serve tvar)
     infoL $ BS.pack "Overview available at http://0.0.0.0:" +++ p +++ page
     runSink $ flush ^= \(k, v, _, _) ->
-        atomically . modifyTVar tvar $ addState k v
+        atomically . modifyTVar tvar $ add k v
 
-newState :: IO (TVar State)
-newState = atomically . newTVar $ State m m m m
+newOverview :: IO (TVar Overview)
+newOverview = atomically . newTVar $ Overview m m m m
   where
     m = Map M.empty
 
-serve :: TVar State -> Request -> IO Response
+add :: Key -> Metric -> Overview -> Overview
+add key val = l $ insert key val
+  where
+    l = modL $ case val of
+        (Counter _) -> counters
+        (Timer _)   -> timers
+        (Gauge _)   -> gauges
+        (Set _)     -> sets
+
+insert :: Key -> Metric -> Map -> Map
+insert key val (Map inner) = Map $! M.alter (const $ Just val) key inner
+
+serve :: TVar Overview -> Request -> IO Response
 serve tvar req | rawPathInfo req == page = success `liftM` readTVarIO tvar
                | otherwise               = return notFound
 
@@ -92,18 +104,3 @@ notFound = response status404 $ copyByteString "{\"error\": \"Not Found\"}"
 
 response :: Status -> Builder -> Response
 response code = ResponseBuilder code [("Content-Type", "application/json")]
-
-addState :: Key -> Metric -> State -> State
-addState key val = l $ insert key val
-  where
-    l = modL $ case val of
-        (Counter _) -> counters
-        (Timer _)   -> timers
-        (Gauge _)   -> gauges
-        (Set _)     -> sets
-
-insert :: Key -> Metric -> Map -> Map
-insert key val (Map inner) = Map $! M.alter f key inner
-  where
-    f (Just x) = Just $ x `append` val
-    f Nothing  = Just val

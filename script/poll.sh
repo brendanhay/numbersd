@@ -19,7 +19,7 @@ echo "poll.sh -c $CONNECT"
 
 while true
 do
-    url="http://127.0.0.1:${CONNECT-8126}/numbers.json"
+    url="http://127.0.0.1:${CONNECT-8126}/numbersd.json"
     echo $url
     curl -f -s -m 1 $url > /dev/null
     sleep "5.${RANDOM:0:1}"

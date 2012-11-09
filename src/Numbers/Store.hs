@@ -15,18 +15,12 @@ module Numbers.Store (
       Store
     , newStore
 
-    -- * Transformer
-    , StoreT
-    , runStore
-
     -- * Functions
-    , storeMetric
+    , insert
     ) where
 
 import Control.Applicative    hiding (empty)
 import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Reader
 import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Maybe
@@ -43,16 +37,8 @@ data Store = Store
     , store    :: TVar (M.Map Key (TVar Metric))
     }
 
-type StoreT a = ReaderT Store IO a
-
 newStore :: Int -> [Sink] -> IO Store
 newStore n sinks = Store n sinks <$> atomically (newTVar M.empty)
-
-runStore :: Store -> StoreT a -> IO a
-runStore = flip runReaderT
-
-storeMetric :: BS.ByteString -> StoreT ()
-storeMetric bstr = ask >>= liftIO . flip insert bstr
 
 insert :: Store -> BS.ByteString -> IO ()
 insert s@Store{..} bstr = do
