@@ -37,7 +37,7 @@ import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
     { _listeners      :: [Uri]
-    , _overview       :: Maybe Int
+    , _overviewPort   :: Maybe Int
     , _interval       :: Int
     , _percentiles    :: [Int]
     , _logEvents      :: [String]
@@ -53,7 +53,7 @@ instance Loggable Config where
     build Config{..} = mconcat
         [ build "Configuration: \n"
         , " -> Listeners:       " ++\ _listeners
-        , " -> Overview Port:   " ++\ _overview
+        , " -> Overview Port:   " ++\ _overviewPort
         , " -> Flush Interval:  " ++\ _interval
         , " -> Percentile:      " ++\ _percentiles
         , " -> Log Events:      " ++\ _logEvents
@@ -67,9 +67,9 @@ instance Loggable Config where
 defaultConfig :: Config
 defaultConfig = Config
     { _listeners      = [Udp (BS.pack "0.0.0.0") 8125]
-    , _overview       = Nothing
+    , _overviewPort   = Nothing
     , _interval       = 10
-    , _percentiles     = [90]
+    , _percentiles    = [90]
     , _logEvents      = ["flush"]
     , _graphites      = []
     , _graphitePrefix = "stats"
@@ -111,9 +111,9 @@ flags name = mode name defaultConfig "Numbers"
       "[URI]"
       "Incoming stats address and port combinations"
 
-    , flagReq ["overview-port"]
-      (\s o -> Right $ (setL overview . Just $ read s) o)
-      "URI"
+    , flagReq ["overview"]
+      (\s o -> Right $ (setL overviewPort . Just $ read s) o)
+      "PORT"
       "HTTP port to serve /numbers.json on"
 
     , flagReq ["interval"]
@@ -126,7 +126,7 @@ flags name = mode name defaultConfig "Numbers"
       "[INT]"
       "Calculate the Nth percentile(s) for timers"
 
-    , flagReq ["log-events"]
+    , flagReq ["log"]
       (\s o -> Right $ (logEvents ^= splitOn "," s) o)
       "[EVENT]"
       "Log [receive,invalid,parse,flush] events"

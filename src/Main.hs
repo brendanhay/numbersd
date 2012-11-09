@@ -35,7 +35,7 @@ main = withSocketsDo $ do
     Config{..} <- parseConfig
 
     sinks <- sequence $
-        catMaybes [logSink _logEvents, overviewSink _overview]
+        catMaybes [logSink _logEvents, overviewSink _overviewPort]
             ++ map (graphiteSink _graphitePrefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
