@@ -1,5 +1,7 @@
 dist
 cabal-dev
+Procfile
+.env
 *.o
 *.hi
 *.chi

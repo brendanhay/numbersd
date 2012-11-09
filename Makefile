@@ -4,7 +4,7 @@ CABAL=`which cabal-dev`
 # Targets
 #
 
-.PHONY: install build conf clean prof
+.PHONY: install build test conf clean prof
 
 all: build
 
@@ -20,6 +20,11 @@ clean:
 conf: clean
 	$(CABAL) configure
 	$(MAKE) build
+
+test:
+	$(CABAL) configure --enable-tests
+	$(MAKE) build
+	$(CABAL) test
 
 prof: clean
 	$(CABAL) configure --enable-executable-profiling

@@ -36,15 +36,15 @@ import Numbers.Types
 import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
-    { _listeners      :: [Uri]
-    , _overviewPort   :: Maybe Int
-    , _interval       :: Int
-    , _percentiles    :: [Int]
-    , _logEvents      :: [String]
-    , _prefix         :: String
-    , _graphites      :: [Uri]
-    , _broadcasts     :: [Uri]
-    , _downstreams    :: [Uri]
+    { _listeners    :: [Uri]
+    , _overviewPort :: Maybe Int
+    , _interval     :: Int
+    , _percentiles  :: [Int]
+    , _logEvents    :: [String]
+    , _prefix       :: String
+    , _graphites    :: [Uri]
+    , _broadcasts   :: [Uri]
+    , _downstreams  :: [Uri]
     }
 
 $(makeLens ''Config)
@@ -52,29 +52,29 @@ $(makeLens ''Config)
 instance Loggable Config where
     build Config{..} = mconcat
         [ build "Configuration: \n"
-        , " -> Listeners:       " ++\ _listeners
-        , " -> Overview Port:   " ++\ _overviewPort
-        , " -> Flush Interval:  " ++\ _interval
-        , " -> Percentile:      " ++\ _percentiles
-        , " -> Log Events:      " ++\ _logEvents
-        , " -> Prefix:          " ++\ _prefix
-        , " -> Graphites:       " ++\ _graphites
-        , " -> Broadcasts:      " ++\ _broadcasts
-        , " -> Downstreams:     " +++ _downstreams
+        , " -> Listeners:      " ++\ _listeners
+        , " -> Overview Port:  " ++\ _overviewPort
+        , " -> Flush Interval: " ++\ _interval
+        , " -> Percentile:     " ++\ _percentiles
+        , " -> Log Events:     " ++\ _logEvents
+        , " -> Prefix:         " ++\ _prefix
+        , " -> Graphites:      " ++\ _graphites
+        , " -> Broadcasts:     " ++\ _broadcasts
+        , " -> Downstreams:    " +++ _downstreams
         ]
     build _ = mempty
 
 defaultConfig :: Config
 defaultConfig = Config
-    { _listeners      = [Udp (BS.pack "0.0.0.0") 8125]
-    , _overviewPort   = Nothing
-    , _interval       = 10
-    , _percentiles    = [90]
-    , _logEvents      = ["flush"]
-    , _graphites      = []
-    , _prefix = "stats"
-    , _broadcasts     = []
-    , _downstreams    = []
+    { _listeners    = [Udp (BS.pack "0.0.0.0") 8125]
+    , _overviewPort = Nothing
+    , _interval     = 10
+    , _percentiles  = [90]
+    , _logEvents    = []
+    , _graphites    = []
+    , _prefix       = "stats"
+    , _broadcasts   = []
+    , _downstreams  = []
     }
 
 parseConfig :: IO Config
@@ -97,7 +97,7 @@ info name = concat
 validate :: Config -> IO ()
 validate Config{..} = do
     check (null _listeners)   "--listeners cannot be blank"
-    check ((> 0) _interval)   "--interval must be greater than 0"
+    check (1 >  _interval)    "--interval must be greater than 0"
     check (null _percentiles) "--percentiles cannot be blank"
     return ()
   where

@@ -2,17 +2,16 @@
 
 RANDOM=$$;
 WORDFILE=/usr/share/dict/words
-LINES=30 # $(cat $WORDFILE | wc -l)
+LINES=10000
 
 word() {
-    rnum=$((RANDOM*RANDOM%$LINES+1))
-    printf `sed -n "$rnum p" $WORDFILE`
+    rnum=$((RANDOM*RANDOM%$LINES+5))
+    printf $(sed -n "$rnum p" $WORDFILE)
 }
 
-TYPES=(g c s ms)
 
 usage() {
-    echo "Usage: -l [port]"
+    echo "Usage: -c [port]"
     exit 1
 }
 
@@ -26,15 +25,17 @@ sample() {
     printf $'%s\n' "${ary[$(($(rand "${#ary[*]}")+1))]}"
 }
 
-while getopts ":l:" opt
+while getopts ":c:" opt
 do
     case $opt in
-        l) PORT=$OPTARG;;
+        c) CONNECT=$OPTARG;;
         *) usage;;
     esac
 done
 
-echo "generate.sh -l $PORT"
+echo "generate.sh -c $CONNECT"
+
+TYPES=('' g c s ms)
 
 emit() {
     local samples rate metric
@@ -45,7 +46,7 @@ emit() {
     metric="$(word):$(sample values[@])|$(sample TYPES[@])$rate"
 
     echo $metric
-    echo -n $metric | nc -u ${HOST-"127.0.0.1"} ${PORT-"8125"} -c
+    echo -n $metric | nc -u ${HOST-"127.0.0.1"} ${CONNECT-"8125"} -c
 }
 
 while true

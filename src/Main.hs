@@ -10,10 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Main (
-    -- * Entry Point
-      main
-    ) where
+module Main where
 
 import Control.Concurrent
 import Control.Concurrent.STM
@@ -35,7 +32,7 @@ main = withSocketsDo $ do
     Config{..} <- parseConfig
 
     sinks <- sequence $
-        catMaybes [logSink _logEvents, overviewSink _overviewPort] -- _prefix
+        catMaybes [logSink _logEvents, overviewSink _overviewPort]
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
@@ -56,13 +53,18 @@ main = withSocketsDo $ do
 
     wait tids
 
-listener :: TQueue BS.ByteString -> Uri -> IO ()
-listener queue uri | tcp uri   = sock spawn
-                   | otherwise = sock push
-  where
-    sock f  = listen uri >>= forever . f
-    spawn s = (forkIO . forever . push) `liftM` accept s
-    push s  = (atomically . writeTQueue queue) `liftM` recv s
+listener queue u@(Tcp _ _) = do
+    s <- listen u
+    forever $ do
+        c <- accept s
+        void . forkIO . forever $ do
+            b <- recv c
+            atomically $ writeTQueue queue b
+listener queue u@(Udp _ _) = do
+    s <- listen u
+    forever $ do
+        b <- recv s
+        atomically $ writeTQueue queue b
 
 fork :: MVar [MVar ()] -> IO () -> IO ThreadId
 fork tids io = do

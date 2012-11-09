@@ -3,23 +3,23 @@
 RANDOM=$$;
 
 usage() {
-    echo "Usage: -a [addr]"
+    echo "Usage: -c [port]"
     exit 1
 }
 
-while getopts ":a:" opt
+while getopts ":c:" opt
 do
     case $opt in
-        a) ADDR=$OPTARG;;
+        c) CONNECT=$OPTARG;;
         *) usage;;
     esac
 done
 
-echo "poll.sh -a $ADDR"
+echo "poll.sh -c $CONNECT"
 
 while true
 do
-    url="http://${ADDR-0.0.0.0:8126}/numbers.json"
+    url="http://127.0.0.1:${CONNECT-8126}/numbers.json"
     echo $url
     curl -f -s -m 1 $url > /dev/null
     sleep "5.${RANDOM:0:1}"
