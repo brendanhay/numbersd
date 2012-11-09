@@ -41,8 +41,8 @@ data Config = Help | Version | Config
     , _interval       :: Int
     , _percentiles    :: [Int]
     , _logEvents      :: [String]
+    , _prefix         :: String
     , _graphites      :: [Uri]
-    , _graphitePrefix :: String
     , _broadcasts     :: [Uri]
     , _downstreams    :: [Uri]
     }
@@ -57,8 +57,8 @@ instance Loggable Config where
         , " -> Flush Interval:  " ++\ _interval
         , " -> Percentile:      " ++\ _percentiles
         , " -> Log Events:      " ++\ _logEvents
+        , " -> Prefix:          " ++\ _prefix
         , " -> Graphites:       " ++\ _graphites
-        , " -> Graphite Prefix: " ++\ _graphitePrefix
         , " -> Broadcasts:      " ++\ _broadcasts
         , " -> Downstreams:     " +++ _downstreams
         ]
@@ -72,7 +72,7 @@ defaultConfig = Config
     , _percentiles    = [90]
     , _logEvents      = ["flush"]
     , _graphites      = []
-    , _graphitePrefix = "stats"
+    , _prefix = "stats"
     , _broadcasts     = []
     , _downstreams    = []
     }
@@ -97,6 +97,7 @@ info name = concat
 validate :: Config -> IO ()
 validate Config{..} = do
     check (null _listeners)   "--listeners cannot be blank"
+    check ((> 0) _interval)   "--interval must be greater than 0"
     check (null _percentiles) "--percentiles cannot be blank"
     return ()
   where
@@ -121,11 +122,11 @@ flags name = mode name defaultConfig "Numbers"
     , flagReq ["events"] (parse (setL logEvents . splitOn ",")) "[EVENT]"
       "Log [receive,invalid,parse,flush] events"
 
+    , flagReq ["prefix"] (many prefix) "STR"
+      "Prepended to keys in the overview and graphite"
+
     , flagReq ["graphites"] (many graphites) "[URI]"
       "Graphite hosts to deliver metrics to"
-
-    , flagReq ["graphite-prefix"] (many graphitePrefix) "STRING"
-      "Prepended to all keys flushed to graphite"
 
     , flagReq ["broadcasts"] (many broadcasts) "[URI]"
       "Hosts to broadcast raw unaggregated packets to"
