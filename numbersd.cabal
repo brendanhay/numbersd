@@ -44,7 +44,6 @@ executable numbersd
                     , data-lens-template
                     , fast-logger
                     , http-types
-                    , mtl
                     , network
                     , regex-pcre
                     , split

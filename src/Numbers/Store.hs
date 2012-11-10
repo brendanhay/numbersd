@@ -27,6 +27,7 @@ import Data.Maybe
 import Data.Time.Clock.POSIX
 import Numbers.Sink
 import Numbers.Types
+import
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M
@@ -39,6 +40,7 @@ data Store = Store
 
 newStore :: Int -> [Sink] -> IO Store
 newStore n sinks = Store n sinks <$> atomically (newTVar M.empty)
+
 
 insert :: Store -> BS.ByteString -> IO ()
 insert s@Store{..} bstr = do
@@ -54,7 +56,7 @@ bucket s@Store{..} key val = do
     emit sinks $ Parse key val
     m <- readTVarIO store
     case M.lookup key m of
-        Just v  -> atomically $ modifyTVar' v (append val)
+        Just v  -> atomically $ modifyTVar' v (aggregate val)
         Nothing -> do
             atomically $ do
                 v <- newTVar val

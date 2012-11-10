@@ -14,6 +14,7 @@ module Main where
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Exception      (finally)
 import Control.Monad
 import Data.Maybe             (catMaybes)
 import Numbers.Config
@@ -37,17 +38,24 @@ main = withSocketsDo $ do
 
     infoL "Sinks started..."
 
-    buf <- atomically newTQueue
+    tids  <- newMVar []
+    store <- newStore _interval sinks
+    buf   <- atomically newTQueue
 
-    mapM_ (forkIO . listener buf) _listeners
+    infoL "Buffering..."
+
+    mapM_ (fork tids . listener buf) _listeners
 
     infoL "Listeners started..."
 
-    store <- newStore _interval sinks
-
-    forever $ do
+    -- Communication between the main thread and other forkIO'd
+    -- threads is much much slower than between two forkIO'd threads
+    fork tids . forever $ do
         bstr <- atomically $ readTQueue buf
         insert store bstr
+
+    -- Just waiting in the main thread
+    wait tids
 
 listener :: TQueue BS.ByteString -> Uri -> IO ()
 listener buf uri | tcp uri   = f tcpListener
@@ -64,3 +72,20 @@ tcpListener buf sock = do
 
 udpListener :: TQueue BS.ByteString -> Socket -> IO ()
 udpListener buf sock = recv sock >>= atomically . writeTQueue buf
+
+fork :: MVar [MVar ()] -> IO () -> IO ThreadId
+fork tids io = do
+    t  <- newEmptyMVar
+    ts <- takeMVar tids
+    putMVar tids $ t:ts
+    forkIO (io `finally` putMVar t ())
+
+wait :: MVar [MVar a] -> IO ()
+wait tids = do
+    ts <- takeMVar tids
+    case ts of
+        []   -> return ()
+        m:ms -> do
+            putMVar tids ms
+            _ <- takeMVar m
+            wait tids

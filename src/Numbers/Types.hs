@@ -22,7 +22,9 @@ module Numbers.Types (
     , Key(..)
 
     -- * Functions
-    , append
+    , zero
+    , aggregate
+    , average
     , decode
     , metric
     ) where
@@ -133,18 +135,36 @@ instance Loggable Metric where
         (Gauge n)   -> "Gauge " +++ n
         (Set ss)    -> "Set " +++ S.toAscList ss
 
+instance Loggable [Metric] where
+    build = mconcat . map (\v -> build v +++ ", ")
+
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord)
 
 instance Loggable Key where
     build (Key k) = build k
 
-append :: Metric -> Metric -> Metric
-append (Counter x) (Counter y) = Counter $ x + y
-append (Timer x)   (Timer y)   = Timer $ x ++ y
-append (Gauge _) g@(Gauge _)   = g
-append (Set x)     (Set y)     = Set $ x `S.union` y
-append _           right       = right
+instance Loggable [Key] where
+    build = mconcat . map (\k -> build k +++ ", ")
+
+zero :: Metric -> Bool
+zero (Counter 0) = True
+zero (Timer [])  = True
+zero (Gauge 0)   = True
+zero (Set x)     = x == S.empty
+zero _           = False
+
+aggregate :: Metric -> Metric -> Metric
+aggregate (Counter x) (Counter y) = Counter $ x + y
+aggregate (Timer x)   (Timer y)   = Timer $ x ++ y
+aggregate (Set x)     (Set y)     = Set $ x `S.union` y
+aggregate _           right       = right
+
+average :: Metric -> Metric -> Metric
+average a b@(Counter _) = Counter $ x / 2
+  where
+    (Counter x) = a `aggregate` b
+average _ right         = right
 
 metric :: Parser (Key, Metric)
 metric = do

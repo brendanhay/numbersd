@@ -24,6 +24,7 @@ import Control.Concurrent.STM
 import Data.Aeson
 import Data.Lens.Common
 import Data.Lens.Template
+import Data.Time.Clock.POSIX
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.HTTP.Types        (status200, status404)
@@ -37,14 +38,20 @@ import Data.Text.Encoding                (decodeUtf8)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M
 
-newtype Map = Map (M.Map Key Metric)
+newtype Map = Map (M.Map Key (Metric, POSIXTime, Int))
+
+-- Check how statsd serializes various things to graphite and implement that
+-- first, before storing a similar format in time series here, and provide a
+-- --resolution cmdarg to specify number of samples to store, and what to average on max
+-- expire samples for keys individualy
 
 instance ToJSON Map where
     toJSON (Map m) = object . map f $ M.toAscList m
       where
-        f (Key k, v) = decodeUtf8 k .= object
-            [ "value" .= v
-            , "timestamp" .= decodeUtf8 "0"
+        f (Key k, (v, ts, n)) = decodeUtf8 k .= object
+            [ "v" .= v
+            , "t" .= show ts
+            , "s" .= n
             ]
 
 data Overview = Overview
@@ -67,18 +74,27 @@ $(makeLens ''Overview)
 overviewSink :: Maybe Int -> Maybe (IO Sink)
 overviewSink = fmap $ \p -> do
     tvar <- newOverview
+
+    void . forkIO . forever $ do
+         threadDelay $ 1000000 * 5
+         t <- getPOSIXTime
+         m <- readTVarIO tvar
+         infoL $ BS.pack "Expiring counters " +++ expired t (_counters m)
+
     void . forkIO $ run p (liftIO . serve tvar)
+
     infoL $ BS.pack "Overview available at http://0.0.0.0:" +++ p +++ page
-    runSink $ flush ^= \(k, v, _, _) ->
-        atomically . modifyTVar tvar $ add k v
+
+    runSink $ flush ^= \(k, v, ts, _) ->
+        atomically . modifyTVar tvar $ add k v ts
 
 newOverview :: IO (TVar Overview)
 newOverview = atomically . newTVar $ Overview m m m m
   where
     m = Map M.empty
 
-add :: Key -> Metric -> Overview -> Overview
-add key val = l $ insert key val
+add :: Key -> Metric -> POSIXTime -> Overview -> Overview
+add key val ts = l $ alter key val ts
   where
     l = modL $ case val of
         (Counter _) -> counters
@@ -86,15 +102,29 @@ add key val = l $ insert key val
         (Gauge _)   -> gauges
         (Set _)     -> sets
 
-insert :: Key -> Metric -> Map -> Map
-insert key val (Map inner) = Map $! M.alter (const $ Just val) key inner
+alter :: Key -> Metric -> POSIXTime -> Map -> Map
+alter key val ts (Map inner) = Map $! M.alter f key inner
+  where
+    f Nothing  = Just (val, ts, 1)
+    f (Just (x, _, n)) = let v = x `average` val
+                         in if zero v
+                             then Nothing
+                             else Just (v, ts, n + 1)
+
+expired :: POSIXTime -> Map -> [Key]
+expired t (Map m) = M.foldWithKey f [] m
+   where
+     f k (v, ts, n) ks = if (t - ts) > 60 then (k:ks) else ks
+
+-- foldWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
+-- keys map = foldWithKey (\k x ks -> k:ks) [] map
+
+page :: BS.ByteString
+page = "/numbersd.json"
 
 serve :: TVar Overview -> Request -> IO Response
 serve tvar req | rawPathInfo req == page = success `liftM` readTVarIO tvar
                | otherwise               = return notFound
-
-page :: BS.ByteString
-page = "/numbersd.json"
 
 success :: ToJSON a => a -> Response
 success = response status200 . fromLazyByteString . encode
