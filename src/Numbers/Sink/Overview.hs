@@ -24,7 +24,6 @@ import Control.Concurrent.STM
 import Data.Aeson
 import Data.Lens.Common
 import Data.Lens.Template
-import Data.Time.Clock.POSIX
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.HTTP.Types        (status200, status404)
@@ -33,12 +32,14 @@ import Numbers.Log
 import Numbers.Types
 import Numbers.Sink.Internal
 
+import Numbers.Whisper
+
 import Data.Text.Encoding                (decodeUtf8)
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map              as M
 
-newtype Map = Map (M.Map Key (Metric, POSIXTime, Int))
+newtype Map = Map (M.Map Key (Metric, Time, Int))
 
 -- Check how statsd serializes various things to graphite and implement that
 -- first, before storing a similar format in time series here, and provide a
@@ -77,7 +78,7 @@ overviewSink = fmap $ \p -> do
 
     void . forkIO . forever $ do
          threadDelay $ 1000000 * 5
-         t <- getPOSIXTime
+         t <- currentTime
          m <- readTVarIO tvar
          infoL $ BS.pack "Expiring counters " +++ expired t (_counters m)
 
@@ -93,7 +94,7 @@ newOverview = atomically . newTVar $ Overview m m m m
   where
     m = Map M.empty
 
-add :: Key -> Metric -> POSIXTime -> Overview -> Overview
+add :: Key -> Metric -> Time -> Overview -> Overview
 add key val ts = l $ alter key val ts
   where
     l = modL $ case val of
@@ -102,7 +103,7 @@ add key val ts = l $ alter key val ts
         (Gauge _)   -> gauges
         (Set _)     -> sets
 
-alter :: Key -> Metric -> POSIXTime -> Map -> Map
+alter :: Key -> Metric -> Time -> Map -> Map
 alter key val ts (Map inner) = Map $! M.alter f key inner
   where
     f Nothing  = Just (val, ts, 1)
@@ -111,13 +112,10 @@ alter key val ts (Map inner) = Map $! M.alter f key inner
                              then Nothing
                              else Just (v, ts, n + 1)
 
-expired :: POSIXTime -> Map -> [Key]
+expired :: Time -> Map -> [Key]
 expired t (Map m) = M.foldWithKey f [] m
    where
      f k (v, ts, n) ks = if (t - ts) > 60 then (k:ks) else ks
-
--- foldWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
--- keys map = foldWithKey (\k x ks -> k:ks) [] map
 
 page :: BS.ByteString
 page = "/numbersd.json"

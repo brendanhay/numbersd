@@ -47,7 +47,7 @@ listen :: Uri -> IO Socket
 listen uri = do
     s@Socket{..} <- open uri
     setSocketOption _sock ReuseAddr 1
-    bind _sock _addr
+    bindSocket _sock _addr
     when (tcp uri) (S.listen _sock maxListenQueue)
     infoL $ "Listening on " +++ uri
     return s

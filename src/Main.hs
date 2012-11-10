@@ -52,7 +52,7 @@ main = withSocketsDo $ do
     -- threads is much much slower than between two forkIO'd threads
     fork tids . forever $ do
         bstr <- atomically $ readTQueue buf
-        insert store bstr
+        parse bstr store
 
     -- Just waiting in the main thread
     wait tids

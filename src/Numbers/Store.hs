@@ -16,48 +16,46 @@ module Numbers.Store (
     , newStore
 
     -- * Functions
-    , insert
+    , parse
     ) where
 
-import Control.Applicative    hiding (empty)
 import Control.Monad
 import Control.Concurrent
-import Data.Time.Clock.POSIX
 import Numbers.Sink
-import Numbers.TMap
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
+import qualified Numbers.TMap          as M
 
 data Store = Store
-    { interval :: Int
-    , sinks    :: [Sink]
-    , store    :: TMap Key Metric
+    { _interval :: Int
+    , _sinks    :: [Sink]
+    , _tmap     :: M.TMap Key Metric
     }
 
 newStore :: Int -> [Sink] -> IO Store
-newStore n sinks = Store n sinks <$> newTMap
+newStore n sinks = Store n sinks `fmap` M.empty
 
-insert :: Store -> BS.ByteString -> IO ()
-insert s@Store{..} bstr = do
-    emit sinks $ Receive bstr
+parse :: BS.ByteString -> Store -> IO ()
+parse bstr s@Store{..} = do
+    emit _sinks $ Receive bstr
     forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
     f b = case decode metric b of
-        Just (k, v) -> bucket s k v
-        Nothing     -> emit sinks $ Invalid bstr
+        Just (k, v) -> bucket k v s
+        Nothing     -> emit _sinks $ Invalid bstr
 
-bucket :: Store -> Key -> Metric -> IO ()
-bucket s@Store{..} key val = updateTMap store key f
+bucket :: Key -> Metric -> Store -> IO ()
+bucket key val s@Store{..} = M.update key f _tmap
   where
     f (Just x) = return $ x `aggregate` val
-    f Nothing  = flush s key >> return val
+    f Nothing  = flush key s >> return val
 
-flush :: Store -> Key -> IO ()
-flush Store{..} key = void . forkIO $ do
+flush :: Key -> Store -> IO ()
+flush key Store{..} = void . forkIO $ do
     threadDelay n
-    v  <- deleteTMap store key
-    ts <- getPOSIXTime
-    emit sinks $ Flush key v ts interval
+    v  <- M.delete key _tmap
+    ts <- currentTime
+    emit _sinks $ Flush key v ts _interval
   where
-    n = interval * 1000000
+    n = _interval * 1000000

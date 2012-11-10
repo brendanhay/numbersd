@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, GeneralizedNewtypeDeriving #-}
 
 -- |
 -- Module      : Numbers.Types
@@ -17,11 +17,13 @@ module Numbers.Types (
       Loggable(..)
 
     -- * Exported Types
+    , Time(..)
     , Uri(..)
     , Metric(..)
     , Key(..)
 
     -- * Functions
+    , currentTime
     , zero
     , aggregate
     , average
@@ -67,9 +69,6 @@ instance Loggable Int where
 instance Loggable Double where
     build = build . show
 
-instance Loggable POSIXTime where
-    build = build . show . toRational
-
 instance Loggable String where
     build = build . BS.pack
 
@@ -90,6 +89,15 @@ instance Loggable [Double] where
     build = build . show
 
 -- ^
+
+newtype Time = Time Integer
+    deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
+
+instance Loggable Time where
+    build (Time n) = build $ show n
+
+currentTime :: IO Time
+currentTime = (Time . truncate) `liftM` getPOSIXTime
 
 data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
          | Udp { _host :: BS.ByteString, _port :: Int }

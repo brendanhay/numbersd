@@ -21,17 +21,20 @@ import qualified Data.Map as M
 
 newtype TMap k v = TMap (TVar (M.Map k v))
 
-newTMap :: MonadIO m => m (TMap k v)
-newTMap = TMap `liftM` (atomic $ newTVar M.empty)
+empty :: MonadIO m => m (TMap k v)
+empty = TMap `liftM` (atomic $ newTVar M.empty)
 
-updateTMap :: (MonadIO m, Ord k) => TMap k v -> k -> (Maybe v -> m v) -> m ()
-updateTMap (TMap tvar) key f = do
+lookup :: (MonadIO m, Ord k) => k -> TMap k v -> m (Maybe v)
+lookup key (TMap tvar) = M.lookup key `liftM` (atomic $ readTVar tvar)
+
+update :: (MonadIO m, Ord k) => k -> (Maybe v -> m v) -> TMap k v -> m ()
+update key f (TMap tvar) = do
     m <- atomic $ readTVar tvar
     v <- f $ M.lookup key m
     atomic $ writeTVar tvar $! M.insert key v m
 
-deleteTMap :: (MonadIO m, Ord k) => TMap k v -> k -> m v
-deleteTMap (TMap tvar) key = atomic $ do
+delete :: (MonadIO m, Ord k) => k -> TMap k v -> m v
+delete key (TMap tvar) = atomic $ do
     m <- readTVar tvar
     writeTVar tvar $! M.delete key m
     return . fromJust $ M.lookup key m

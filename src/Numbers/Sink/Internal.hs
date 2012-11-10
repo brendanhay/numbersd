@@ -33,7 +33,6 @@ import Control.Monad
 import Control.Concurrent            (forkIO)
 import Control.Concurrent.STM
 import Data.Lens.Template
-import Data.Time.Clock.POSIX
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
@@ -41,13 +40,13 @@ import qualified Data.ByteString.Char8 as BS
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
-           | Flush Key Metric POSIXTime Int
+           | Flush Key Metric Time Int
 
 data Sink = Sink
     { _receive :: BS.ByteString -> IO ()
     , _invalid :: BS.ByteString -> IO ()
     , _parse   :: (Key, Metric) -> IO ()
-    , _flush   :: (Key, Metric, POSIXTime, Int) -> IO ()
+    , _flush   :: (Key, Metric, Time, Int) -> IO ()
     , _events  :: TQueue Event
     }
 

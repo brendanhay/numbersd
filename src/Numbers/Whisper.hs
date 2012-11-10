@@ -12,29 +12,67 @@
 
 module Numbers.Whisper where
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Concurrent
-import Control.Concurrent.STM
-import Data.Time.Clock.POSIX
-import Numbers.Map
+import Numbers.Types
 
-type Time  = Time Integer
-type Value = Value Double
+import qualified Numbers.TMap as M
 
-data Point = Point Time Value
+type Resolution = Integer
+type Step = Integer
 
-data Whisper k = Whisper (TMap k Point)
+data Point = Point Time Double
+    deriving (Show)
 
-newWhisper :: DB
+type Series = [Point]
 
-currentTime :: IO Time
-currentTime = truncate `liftM` getPOSIXTime
+data Whisper k = Whisper
+    { _res  :: Resolution
+    , _step :: Step
+    , _tmap :: M.TMap k Series
+    }
 
+newWhisper :: Resolution -> Step -> IO (Whisper k)
+newWhisper res step = Whisper res step `fmap` M.empty
 
--- Check how statsd serializes various things to graphite and implement that
--- first, before storing a similar format in time series here, and provide a
--- --resolution cmdarg to specify number of samples to store, and what to average on max
--- expire samples for keys individualy
+point :: Ord k => k -> Point -> Whisper k -> IO ()
+point key p Whisper{..} = M.update key (return . f) _tmap
+  where
+    f (Just ss) = insert _res _step p ss
+    f Nothing   = [p]
 
+series :: Ord k => k -> Whisper k -> IO (Maybe Series)
+series key Whisper{..} = M.lookup key _tmap
 
+-- select :: Resolution -> Step -> Time -> Time -> Series -> Series
+-- select res step from to ss = take n $ filter (\(Point t _) -> t >= from) b
+--   where
+--     b = take n . tail $ balance step (Point to 0) ss
+--     n = res `ceil` step
+
+insert :: Resolution -> Step -> Point -> Series -> Series
+insert res step p ss = take n $ balance step p ss
+  where
+    n = res `ceil` step
+
+balance :: Step -> Point -> Series -> Series
+balance _    x []                   = [x]
+balance step x ss@(y:_) | d <= step = x:ss
+                        | otherwise = x:a ++ ss
+  where
+    a = generate (c - 1) step x
+    c = d `ceil` step
+    d = x `diff` y
+
+time :: Point -> Integer
+time (Point (Time t) _) = t
+
+generate :: Int -> Step -> Point -> [Point]
+generate n step p = take n . map f . scanl1 (+) $ repeat step
+  where
+    t   = time p
+    f s = Point (Time $ t - s) 0
+
+diff :: Point -> Point -> Integer
+diff x y = fromIntegral $ time x - time y
+
+ceil :: Integral a => Integer -> Integer -> a
+ceil x y = ceiling (fromIntegral x / fromIntegral y :: Double)
