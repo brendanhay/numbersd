@@ -37,9 +37,10 @@ import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
     { _listeners    :: [Uri]
-    , _overviewPort :: Maybe Int
-    , _interval     :: Int
-    , _percentiles  :: [Int]
+    , _httpPort     :: Maybe Integer
+    , _resolution   :: Integer
+    , _interval     :: Integer
+    , _percentiles  :: [Integer]
     , _logEvents    :: [String]
     , _prefix       :: String
     , _graphites    :: [Uri]
@@ -53,9 +54,10 @@ instance Loggable Config where
     build Config{..} = mconcat
         [ build "Configuration: \n"
         , " -> Listeners:      " ++\ _listeners
-        , " -> Overview Port:  " ++\ _overviewPort
+        , " -> HTTP Port:      " ++\ _httpPort
+        , " -> Resolution:     " ++\ _resolution
         , " -> Flush Interval: " ++\ _interval
-        , " -> Percentile:     " ++\ _percentiles
+        , " -> Percentiles:    " ++\ _percentiles
         , " -> Log Events:     " ++\ _logEvents
         , " -> Prefix:         " ++\ _prefix
         , " -> Graphites:      " ++\ _graphites
@@ -67,8 +69,9 @@ instance Loggable Config where
 defaultConfig :: Config
 defaultConfig = Config
     { _listeners    = [Udp (BS.pack "0.0.0.0") 8125]
-    , _overviewPort = Nothing
+    , _httpPort     = Nothing
     , _interval     = 10
+    , _resolution   = 60
     , _percentiles  = [90]
     , _logEvents    = []
     , _graphites    = []
@@ -96,9 +99,10 @@ info name = concat
 
 validate :: Config -> IO ()
 validate Config{..} = do
-    check (null _listeners)   "--listeners cannot be blank"
-    check (1 >  _interval)    "--interval must be greater than 0"
-    check (null _percentiles) "--percentiles cannot be blank"
+    check (null _listeners)          "--listeners cannot be blank"
+    check (1 > _interval)            "--interval must be greater than 0"
+    check (_interval >= _resolution) "--resolution must be greater than --interval"
+    check (null _percentiles)        "--percentiles cannot be blank"
     return ()
   where
     check p m = when p $ putStrLn m >> exitWith (ExitFailure 1)
@@ -110,11 +114,14 @@ flags name = mode name defaultConfig "Numbers"
     [ flagReq ["listeners"] (many listeners) "[URI]"
       "Incoming stats address and port combinations"
 
-    , flagReq ["overview"] (parse (setL overviewPort . Just . read)) "PORT"
-      "HTTP port to serve /numbers.json on"
+    , flagReq ["http"] (parse (setL httpPort . Just . read)) "PORT"
+      "HTTP port to serve /numbersd.{json,whisper} time series on"
+
+    , flagReq ["resolution"] (one resolution) "INT"
+      "Resolution in seconds for time series data"
 
     , flagReq ["interval"] (one interval) "INT"
-      "Interval between key flushes to subscribed sinks"
+      "Interval in seconds between key flushes to subscribed sinks"
 
     , flagReq ["percentiles"] (many percentiles) "[INT]"
       "Calculate the Nth percentile(s) for timers"
@@ -123,7 +130,7 @@ flags name = mode name defaultConfig "Numbers"
       "Log [receive,invalid,parse,flush] events"
 
     , flagReq ["prefix"] (many prefix) "STR"
-      "Prepended to keys in the overview and graphite"
+      "Prepended to keys in the http interfaces and graphite"
 
     , flagReq ["graphites"] (many graphites) "[URI]"
       "Graphite hosts to deliver metrics to"

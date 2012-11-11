@@ -12,23 +12,24 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper (
-    -- * Exported Types
-      Resolution
-    , Step
-    , Point(..)
+module Numbers.Whisper where
+    -- -- * Exported Types
+    --   Resolution
+    -- , Step
+    -- , Point(..)
 
-    -- * Opaque
-    , Whisper
-    , newWhisper
+    -- -- * Opaque
+    -- , Whisper
+    -- , newWhisper
 
-    -- * Insertion
-    , addPoint
+    -- -- * Insertion
+    -- , addPoint
 
-    -- * Serialisation
-    , textSeries
-    , jsonSeries
-    ) where
+    -- -- * Serialisation
+    -- , textSeries
+    -- , jsonSeries
+    -- ) where
+
 
 import Blaze.ByteString.Builder (Builder, copyLazyByteString)
 import Data.Aeson
@@ -38,6 +39,7 @@ import Numeric                  (showFFloat)
 import Data.List                (intercalate)
 import Numbers.Types
 import Data.Text                (pack)
+import Data.Text.Encoding       (decodeUtf8)
 import Data.Attoparsec.Number   (Number(D))
 
 import qualified Data.Map as M
@@ -50,10 +52,10 @@ data Point = Point Time Double
 
 type Series = [Point]
 
-data Whisper k = Whisper
-    { _res  :: Resolution
+data Whisper = Whisper
+    { _tmap :: M.Map Key Series
+    , _res  :: Resolution
     , _step :: Step
-    , _tmap :: M.Map k Series
     }
 
 instance Loggable Series where
@@ -62,50 +64,51 @@ instance Loggable Series where
 instance ToJSON Point where
     toJSON = Number . D . read . stringify
 
-newWhisper :: Resolution -> Step -> Whisper k
-newWhisper res step = Whisper res step M.empty
+newWhisper :: Resolution -> Step -> Whisper
+newWhisper = Whisper M.empty
 
-addPoint :: Ord k => k -> Point -> Whisper k -> Whisper k
+addMetric :: Key -> Metric -> Time -> Whisper -> Whisper
+addMetric key val ts = addPoint key (Point ts v)
+  where
+    v = case val of
+        (Counter d) -> d
+        (Timer ds)  -> sum ds / (fromIntegral $ length ds)
+        (Gauge d)   -> d
+        (Set _)     -> 1
+
+addPoint :: Key -> Point -> Whisper -> Whisper
 addPoint key p w@Whisper{..} = w { _tmap = M.alter (return . f) key _tmap }
   where
-    f (Just ss) = insert _res _step p ss
-    f Nothing   = [p]
+    f = insert _res _step p . fromMaybe []
 
-textSeries :: (Ord k, Loggable k) => Time -> Whisper k -> Builder
+textSeries :: Time -> Whisper -> Builder
 textSeries to w@Whisper{..} = build . mconcat . map f $ allSeries to w
   where
     f (k, s) = k +++ "," +++ start s +++ ","
         +++ end s +++ "," +++ _step +++ "|" +++ build s +++ "\n"
 
-jsonSeries :: (Ord k, ToJSON k) => Time -> Whisper k -> Builder
-jsonSeries to w@Whisper{..} =
-    copyLazyByteString . encode . object . map f $ allSeries to w
+jsonSeries :: Time -> Whisper -> Builder
+jsonSeries to w@Whisper{..} = enc . map f $ allSeries to w
   where
-    t k = let (String b) = toJSON k
-          in b
-    f (k, s) = t k .= object
+    enc = copyLazyByteString . encode . object
+    f (Key k, s) = decodeUtf8 k .= object
         [ pack "start"  .= start s
         , pack "end"    .= end s
         , pack "step"   .= _step
         , pack "points" .= toJSON s
         ]
 
-allSeries :: Ord k => Time -> Whisper k -> [(k, Series)]
+allSeries :: Time -> Whisper -> [(Key, Series)]
 allSeries to w@Whisper{..} = catMaybes $ map f keys
   where
     f k  = (k,) `fmap` series k to w
     keys = M.keys _tmap
 
-series :: Ord k => k -> Time -> Whisper k -> Maybe Series
-series key to Whisper{..} = select _res _step to `fmap` ss
+series :: Key -> Time -> Whisper -> Maybe Series
+series key to Whisper{..} = (take n . balance _step (point to)) `fmap` ss
   where
+    n  = _res `ceil` _step
     ss = M.lookup key _tmap
-
-select :: Resolution -> Step -> Time -> Series -> Series
-select res step to ss = take n b
-  where
-    b = take n . tail $ balance step (Point to 0) ss
-    n = res `ceil` step
 
 insert :: Resolution -> Step -> Point -> Series -> Series
 insert res step p ss = take n $ balance step p ss
@@ -113,25 +116,20 @@ insert res step p ss = take n $ balance step p ss
     n = res `ceil` step
 
 balance :: Step -> Point -> Series -> Series
-balance _    x []                   = [x]
-balance step x ss@(y:_) | d <= step = x:ss
-                        | otherwise = x:a ++ ss
+balance step x []             = x:gen
   where
-    a = generate (c - 1) step x
+    gen = map (\s -> point . Time $ time x + s) . scanl1 (-) $ repeat step
+balance step x ss | d <= step = x:ss
+                  | otherwise = x:a ++ ss
+  where
+    a = take (c - 1) $ generate step (-) x
     c = d `ceil` step
-    d = x `diff` y
+    d = x `diff` head ss
 
-generate :: Int -> Step -> Point -> [Point]
-generate n step p = take n . map f . scanl1 (+) $ repeat step
+generate :: Step -> (Integer -> Integer -> Integer) -> Point -> [Point]
+generate step op p = map f . scanl1 (+) $ repeat step
   where
-    t   = time p
-    f s = Point (Time $ t - s) 0
-
-diff :: Point -> Point -> Integer
-diff x y = fromIntegral $ time x - time y
-
-ceil :: Integral a => Integer -> Integer -> a
-ceil x y = ceiling (fromIntegral x / fromIntegral y :: Double)
+    f = point . Time . op (time p)
 
 end :: Series -> Integer
 end = time . head
@@ -139,8 +137,17 @@ end = time . head
 start :: Series -> Integer
 start = time . last
 
+diff :: Point -> Point -> Integer
+diff x y = fromIntegral $ time x - time y
+
 time :: Point -> Integer
 time (Point (Time t) _) = t
 
+point :: Time -> Point
+point = flip Point 0
+
 stringify :: Point -> String
 stringify (Point _ v) = showFFloat (Just 1) v ""
+
+ceil :: Integral a => Integer -> Integer -> a
+ceil x y = ceiling (fromIntegral x / fromIntegral y :: Double)

@@ -35,12 +35,11 @@ import Blaze.ByteString.Builder
 import Control.Arrow                     ((***), first)
 import Control.Applicative        hiding (empty)
 import Control.Monad
-import Data.Aeson                        (ToJSON(..), Value(String))
+import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
 import Data.List                         (intercalate, intersperse)
 import Data.Maybe
 import Data.Monoid
-import Data.Text.Encoding                (decodeUtf8)
 import Data.Time.Clock.POSIX
 import Text.Regex.PCRE            hiding (match)
 
@@ -64,9 +63,6 @@ instance Loggable Builder where
 instance Loggable BS.ByteString where
     build = copyByteString
 
-instance Loggable Int where
-    build = build . show
-
 instance Loggable Integer where
     build = build . show
 
@@ -86,7 +82,7 @@ instance Loggable a => Loggable (Maybe a) where
 -- Investigate how to avoid overlapping instances for
 -- instance Loggable a => Loggable [a] delcaration
 
-instance Loggable [Int] where
+instance Loggable [Integer] where
     build = build . show
 
 instance Loggable [Double] where
@@ -103,8 +99,8 @@ instance Loggable Time where
 currentTime :: IO Time
 currentTime = (Time . truncate) `liftM` getPOSIXTime
 
-data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
-         | Udp { _host :: BS.ByteString, _port :: Int }
+data Uri = Tcp { _host :: BS.ByteString, _port :: Integer }
+         | Udp { _host :: BS.ByteString, _port :: Integer }
 
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uri $ BS.pack a, "")
@@ -120,7 +116,7 @@ uri :: Parser Uri
 uri = do
     s <- PC.takeTill (== ':') <* string (BS.pack "://")
     a <- PC.takeTill (== ':') <* PC.char ':'
-    p <- PC.decimal :: Parser Int
+    p <- PC.decimal :: Parser Integer
     return $ case BS.unpack s of
         "tcp"  -> Tcp a p
         "udp"  -> Udp a p
@@ -152,9 +148,6 @@ instance Loggable [Metric] where
 
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord)
-
-instance ToJSON Key where
-    toJSON (Key k) = String $ decodeUtf8 k
 
 instance Loggable Key where
     build (Key k) = build k

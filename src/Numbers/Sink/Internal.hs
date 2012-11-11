@@ -40,13 +40,13 @@ import qualified Data.ByteString.Char8 as BS
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
-           | Flush Key Metric Time Int
+           | Flush Key Metric Time Integer
 
 data Sink = Sink
     { _receive :: BS.ByteString -> IO ()
     , _invalid :: BS.ByteString -> IO ()
     , _parse   :: (Key, Metric) -> IO ()
-    , _flush   :: (Key, Metric, Time, Int) -> IO ()
+    , _flush   :: (Key, Metric, Time, Integer) -> IO ()
     , _events  :: TQueue Event
     }
 
