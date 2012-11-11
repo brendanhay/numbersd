@@ -106,12 +106,10 @@ An example monitoring workflow I've observed in production, looks something like
 </p>
 **Figure 1**
 
-1. Application emits metrics over the network
-2. Unreliable UDP packets are (hopefully) delivered to a monolithic aggregator instance
-3. The aggregator sends packets over a TCP connection to Graphite
-4. Nagios invokes an NPRE check on the application host
-5. The NPRE check reaches out across the network to the Graphite API to quantify application health
-
+1. Application emits unreliable UDP packets that are (hopefully) delivered to a monolithic aggregator instance.
+3. The aggregator sends packets over a TCP connection to Graphite.
+4. Nagios invokes an NPRE check on the application host.
+5. The NPRE check reaches out across the network to the Graphite API to quantify application health.
 
 There are 4 actors involved in [Figure 1](#figure-1): the Application, Network, Aggregator, Graphite, and Nagios.
 
@@ -130,8 +128,14 @@ two between the application and Nagios:
 </p>
 **Figure 2**
 
+1. The application emits UDP packets via the loopback interface to a local NumbersD daemon.
+2. NumbersD pushes metrics over a TCP connection to Graphite.
+3. Nagios invokes an NPRE check on the application host.
+4. The NPRE check calls the local NumbersD daemon's `/numbersd.whisper` time series API.
 
-> TODO
+This has two primary advantages. Firstly, reliability - by ensuring UDP packets are only transmitted
+on the localhost. And secondly, by seperating the concerns of metric durability/storage/visualisation
+and monitoring, two separate single point of failures have been removed from the monitoring workflow.
 
 
 ## Install
