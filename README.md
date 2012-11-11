@@ -6,10 +6,13 @@ Table of Contents
 
 * [Introduction](#introduction)
 * [Compatibility](#compatibility)
+* [Functionality](#functionality)
+* [Scenarios](#scenarios)
 * [Install](#install)
-* [Running](#running)
+* [Configuration](#configuration)
     - [Available Flags](#available-flags)
     - [Flag Types](#flag-types)
+* [Running](#running)
 * [Contribute](#contribute)
 * [Licence](#licence)
 
@@ -24,6 +27,69 @@ Table of Contents
 > TODO
 
 
+## Functionality
+
+NumbersD has identical aggregation characteristics to StatsD. It differs significantly in terms of
+philosophy and intended usage.
+
+Below are some of the more interesting behaviours available.
+
+### Listeners
+
+A listener is a scheme, host, and port specification for a listen socket which will accept and parse
+metrics from incoming connections. They are specified with either a `tcp://` or `udp://` scheme to
+control the type of listening socket.
+
+Multiple listeners can be passed as a comma seperated list to the `--listeners`
+to listen upon multiple ports and protocols simultaneously.
+
+
+### HTTP
+
+If an HTTP port is specified, NumbersD will start the embedded HTTP server. GET requests to
+the following request paths will be responsed with an appropriate content type:
+
+* `/overview.json` Internal counters and runtime information.
+* `/numbersd.whisper` Low resolution time series in Graphite compatible format. (Identical to `&rawData=true`)
+* `/numbersd.json` JSON representation of the `.whisper` format above
+
+The `.whisper` response type is intended to be used from Nagios or other monitoring tools
+to connect directly to a `NumbersD` instance running alongside an applicaiton.
+
+There are a number of `check_graphite` Nagios NPRE plugins available which should work identically
+to pointing directly at an instance of Graphite.
+
+
+### Graphites
+
+(Yes, plural)
+
+As with all list styled command flags a list of tcp schemed URIs can be specified to
+simultaneously connect to multiple backend Graphite instnaces.
+
+
+### Broadcasters
+
+Broadcasters perform identically to StatsD's `repeater` backend. They simply forward on received metrics
+to a list of tcp and udp schemed URIs.
+
+The intent being, you can listen on TCP and then broadcast over a UDP connection, or vice versa.
+
+
+### Downstreams
+
+Downstreams again take a list of tcp and udp schemed URIs, with the closest simalarity being StatsD's
+`statsd-backend` plugin.
+
+The metrics that can be safely aggregated without losing precision or causing 'slopes' (such as counters)
+are forwarded upon `flush`, all the others are forwarded unmodified.
+
+
+## Scenarios
+
+> TODO
+
+
 ## Install
 
 At present, it is assumed the user knows some of the Haskell eco system and
@@ -33,15 +99,12 @@ You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile numbersd.
 
 
-## Running
+## Configuration
 
-After a successful compile, the `./numbersd` symlink should be pointing to the built binary.
+Command line flags are used to configure numbersd, a full table of all the flags is available [here](#available-flags).
 
 
 ### Available Flags
-
-Command line flags are used to configure numbersd, below is a table containing
-the available settings and which statsd configuration keys they pertain to:
 
 <table width="100%">
 
@@ -144,6 +207,11 @@ the available settings and which statsd configuration keys they pertain to:
 * `STR` An ASCII encoded string.
 * `EVENT` Internal event types must be one of `(receive|invalid|parse|flush)`.
 * `[...]` All list types are specified a comma seperated string containing no spaces. For example: `--listeners udp://0.0.0.0:8125,tcp://0.0.0.0:8126` is a valid `[URI]` list.
+
+
+## Running
+
+After a successful compile, the `./numbersd` symlink should be pointing to the built binary.
 
 
 ## Contribute
