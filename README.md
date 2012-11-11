@@ -8,6 +8,8 @@ Table of Contents
 * [Compatibility](#compatibility)
 * [Install](#install)
 * [Running](#running)
+    - [Available Flags](#available-flags)
+    - [Flag Types](#flag-types)
 * [Contribute](#contribute)
 * [Licence](#licence)
 
@@ -20,8 +22,6 @@ Compatibility
 > TODO
 
 
-<a name="install" />
-
 Install
 -------
 
@@ -32,12 +32,13 @@ You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile numbersd.
 
 
-<a name="running">
-
 Running
 -------
 
 After a successful compile, the `./numbersd` symlink should be pointing to the built binary.
+
+<a name="available-flags" />
+**Available Flags**
 
 Command line flags are used to configure numbersd, below is a table containing
 the available settings and which statsd configuration keys they pertain to:
@@ -95,7 +96,7 @@ the available settings and which statsd configuration keys they pertain to:
   <tr>
     <td><code>--events</code></td>
     <td></td>
-    <td><code>receive,...</code></td>
+    <td><code>EVENT,...</code></td>
     <td>Combination of receive, invalid, parse, or flush events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
   </tr>
@@ -134,15 +135,22 @@ the available settings and which statsd configuration keys they pertain to:
 
 </table>
 
-<a name="contribute" />
+<a name="flag-types" />
+**Flag Types**
+
+* `URI`: Combination of scheme, host, and port. The scheme must be one of `(tcp|udp)`.
+* `PORT`: Port number. Must be within the valid bindable range for non-root users.
+* `INT`: A valid Haskell [Int](http://www.haskell.org/ghc/docs/latest/html/libraries/base/Prelude.html#t:Int) type.
+* `STR`: An ASCII encoded string.
+* `EVENT`: Internal event types must be one of `(receive|invalid|parse|flush)`.
+* `[...]`: All list types are specified a comma seperated string containing no spaces. For example: `--listeners udp://0.0.0.0:8125,tcp://0.0.0.0:8126` is a valid `[URI]` list.
+
 
 Contribute
 ----------
 
 For any problems, comments or feedback please create an issue [here on GitHub](github.com/brendanhay/numbersd/issues).
 
-
-<a name="licence" />
 
 Licence
 -------
