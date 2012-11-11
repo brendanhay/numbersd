@@ -1,10 +1,10 @@
+# NumbersD
 
-NumbersD
-=====
 
 Table of Contents
 -----------------
 
+* [Introduction](#introduction)
 * [Compatibility](#compatibility)
 * [Install](#install)
 * [Running](#running)
@@ -14,16 +14,17 @@ Table of Contents
 * [Licence](#licence)
 
 
-<a name="compatibility" />
-
-Compatibility
--------------
+## Introduction
 
 > TODO
 
 
-Install
--------
+## Compatibility
+
+> TODO
+
+
+## Install
 
 At present, it is assumed the user knows some of the Haskell eco system and
 in particular wrangling cabal-dev to obtain dependencies. I plan to offer pre-built binaries for x86_64 OSX and Linux in future.
@@ -32,13 +33,13 @@ You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile numbersd.
 
 
-Running
--------
+## Running
 
 After a successful compile, the `./numbersd` symlink should be pointing to the built binary.
 
 <a name="available-flags" />
-**Available Flags**
+
+### Available Flags
 
 Command line flags are used to configure numbersd, below is a table containing
 the available settings and which statsd configuration keys they pertain to:
@@ -146,13 +147,11 @@ the available settings and which statsd configuration keys they pertain to:
 * `[...]`: All list types are specified a comma seperated string containing no spaces. For example: `--listeners udp://0.0.0.0:8125,tcp://0.0.0.0:8126` is a valid `[URI]` list.
 
 
-Contribute
-----------
+## Contribute
 
 For any problems, comments or feedback please create an issue [here on GitHub](github.com/brendanhay/numbersd/issues).
 
 
-Licence
--------
+## Licence
 
 NumbersD is released under the [Mozilla Public License Version 2.0](http://www.mozilla.org/MPL/)
