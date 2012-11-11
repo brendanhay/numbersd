@@ -35,11 +35,12 @@ import Blaze.ByteString.Builder
 import Control.Arrow                     ((***), first)
 import Control.Applicative        hiding (empty)
 import Control.Monad
-import Data.Aeson                        (ToJSON(..))
+import Data.Aeson                        (ToJSON(..), Value(String))
 import Data.Attoparsec.ByteString
 import Data.List                         (intercalate, intersperse)
 import Data.Maybe
 import Data.Monoid
+import Data.Text.Encoding                (decodeUtf8)
 import Data.Time.Clock.POSIX
 import Text.Regex.PCRE            hiding (match)
 
@@ -64,6 +65,9 @@ instance Loggable BS.ByteString where
     build = copyByteString
 
 instance Loggable Int where
+    build = build . show
+
+instance Loggable Integer where
     build = build . show
 
 instance Loggable Double where
@@ -144,16 +148,19 @@ instance Loggable Metric where
         (Set ss)    -> "Set " +++ S.toAscList ss
 
 instance Loggable [Metric] where
-    build = mconcat . map (\v -> build v +++ ", ")
+    build = mconcat . intersperse (build ",") . map build
 
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord)
+
+instance ToJSON Key where
+    toJSON (Key k) = String $ decodeUtf8 k
 
 instance Loggable Key where
     build (Key k) = build k
 
 instance Loggable [Key] where
-    build = mconcat . map (\k -> build k +++ ", ")
+    build = mconcat . intersperse (build ",") . map build
 
 zero :: Metric -> Bool
 zero (Counter 0) = True
