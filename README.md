@@ -7,6 +7,11 @@ Table of Contents
 * [Introduction](#introduction)
 * [Compatibility](#compatibility)
 * [Functionality](#functionality)
+    - [Listeners](#listeners)
+    - [Overview and Time Series](#overview-and-time-series)
+    - [Graphites](#graphites)
+    - [Broadcasters](#broadcasters)
+    - [Downstreams](#downstreams)
 * [Scenarios](#scenarios)
 * [Install](#install)
 * [Configuration](#configuration)
@@ -40,13 +45,13 @@ A listener is a scheme, host, and port specification for a listen socket which w
 metrics from incoming connections. They are specified with either a `tcp://` or `udp://` scheme to
 control the type of listening socket.
 
-Multiple listeners can be passed as a comma seperated list to the `--listeners`
+Multiple listeners can be passed as a comma seperated list to the `--listeners` flag
 to listen upon multiple ports and protocols simultaneously.
 
 
-### HTTP
+### Overview and Time Series
 
-If an HTTP port is specified, NumbersD will start the embedded HTTP server. GET requests to
+If an HTTP port is specified, NumbersD will start an embedded HTTP server. GET requests to
 the following request paths will be responsed with an appropriate content type:
 
 * `/overview.json` Internal counters and runtime information.
