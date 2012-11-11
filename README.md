@@ -138,6 +138,39 @@ on the localhost. And secondly, by seperating the concerns of metric durability/
 and monitoring, two separate single point of failures have been removed from the monitoring workflow.
 
 
+### Redundancy
+
+Multiple Graphites
+
+<a name="figure-3" />
+<p align="center">
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-graphites.png" />
+</p>
+**Figure 3**
+
+
+### Federation
+
+Heirarchy
+
+<a name="figure-4" />
+<p align="center">
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-downstreams.png" />
+</p>
+**Figure 4**
+
+
+### Fanout
+
+Broadcasters
+
+<a name="figure-5" />
+<p align="center">
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-broadcasts.png" />
+</p>
+**Figure 5**
+
+
 ## Install
 
 At present, it is assumed the user knows some of the Haskell eco system and
