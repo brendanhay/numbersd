@@ -60,23 +60,31 @@ the available settings and which statsd configuration keys they pertain to:
     <td><code>address</code>, <code>port</code></td>
   </tr>
 
-   <tr>
-    <td><code>--overview</code></td>
+  <tr>
+    <td><code>--http</code></td>
     <td></td>
-    <td><code>URI</code></td>
-    <td>HTTP address and port for <code>/numbersd.json</code></td>
+    <td><code>PORT</code></td>
+    <td>HTTP port to serve the overview and time series on</code></td>
     <td><code>mgmt_address</code>, <code>mgmt_port</code></td>
   </tr>
 
-   <tr>
+  <tr>
+    <td><code>--resolution</code></td>
+    <td><code>60</code></td>
+    <td><code>INT</code></td>
+    <td>Resolution in seconds for time series data</code></td>
+    <td></td>
+  </tr>
+
+  <tr>
     <td><code>--interval</code></td>
     <td><code>10</code></td>
     <td><code>INT</code></td>
-    <td>Interval between key flushes to subscribed sinks</td>
+    <td>Interval in seconds between key flushes to subscribed sinks</td>
     <td><code>flushInterval</code></td>
   </tr>
 
-   <tr>
+  <tr>
     <td><code>--percentiles</code></td>
     <td><code>90</code></td>
     <td><code>INT,...</code></td>
@@ -84,19 +92,19 @@ the available settings and which statsd configuration keys they pertain to:
     <td><code>percentThreshold</code></td>
   </tr>
 
-   <tr>
-    <td><code>--log-events</code></td>
-    <td><code>flush</code></td>
+  <tr>
+    <td><code>--events</code></td>
+    <td></td>
     <td><code>receive,...</code></td>
     <td>Combination of receive, invalid, parse, or flush events to log</td>
     <td><code>debug</code>, <code>dumpMessages</code></td>
   </tr>
 
   <tr>
-    <td><code>--log-path</code></td>
-    <td><code>stdout</code></td>
-    <td><code>PATH</code></td>
-    <td>Log file path to write events to</td>
+    <td><code>--prefix</code></td>
+    <td></td>
+    <td><code>STR</code></td>
+    <td>Prepended to keys in the http interfaces and graphite</td>
     <td><code>log</code></td>
   </tr>
 

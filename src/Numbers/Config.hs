@@ -115,7 +115,7 @@ flags name = mode name defaultConfig "Numbers"
       "Incoming stats address and port combinations"
 
     , flagReq ["http"] (parse (setL httpPort . Just . read)) "PORT"
-      "HTTP port to serve overview and time series on"
+      "HTTP port to serve the overview and time series on"
 
     , flagReq ["resolution"] (one resolution) "INT"
       "Resolution in seconds for time series data"
