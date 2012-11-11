@@ -13,6 +13,10 @@ Table of Contents
     - [Broadcasters](#broadcasters)
     - [Downstreams](#downstreams)
 * [Scenarios](#scenarios)
+    - [Monitoring](#monitoring)
+    - [Redundancy](#redundancy)
+    - [Federation](#federation)
+    - [Forwarding](#forwarding)
 * [Install](#install)
 * [Configuration](#configuration)
     - [Available Flags](#available-flags)
@@ -160,8 +164,7 @@ Multiple Graphites
 A conceited federation heirarchy
 
 
-### Fanout
-
+### Forwarding
 
 <a name="figure-5" />
 <p align="center">
@@ -169,7 +172,7 @@ A conceited federation heirarchy
 </p>
 **Figure 5**
 
-Broadcasters
+Broadcast metrics to a single point, where the monitoring check happens
 
 
 ## Install
