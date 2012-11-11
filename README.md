@@ -140,18 +140,16 @@ and monitoring, two separate single point of failures have been removed from the
 
 ### Redundancy
 
-Multiple Graphites
-
 <a name="figure-3" />
 <p align="center">
   <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-graphites.png" />
 </p>
 **Figure 3**
 
+Multiple Graphites
+
 
 ### Federation
-
-Heirarchy
 
 <a name="figure-4" />
 <p align="center">
@@ -159,16 +157,19 @@ Heirarchy
 </p>
 **Figure 4**
 
+A conceited federation heirarchy
+
 
 ### Fanout
 
-Broadcasters
 
 <a name="figure-5" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-broadcasts.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-broadcasters.png" />
 </p>
 **Figure 5**
+
+Broadcasters
 
 
 ## Install
