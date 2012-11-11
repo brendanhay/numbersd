@@ -12,24 +12,23 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper where
-    -- -- * Exported Types
-    --   Resolution
-    -- , Step
-    -- , Point(..)
+module Numbers.Whisper (
+    -- * Exported Types
+      Resolution
+    , Step
+    , Point(..)
 
-    -- -- * Opaque
-    -- , Whisper
-    -- , newWhisper
+    -- * Opaque
+    , Whisper
+    , newWhisper
 
-    -- -- * Insertion
-    -- , addPoint
+    -- * Insertion
+    , addPoint
 
-    -- -- * Serialisation
-    -- , textSeries
-    -- , jsonSeries
-    -- ) where
-
+    -- * Serialisation
+    , textSeries
+    , jsonSeries
+    ) where
 
 import Blaze.ByteString.Builder (Builder, copyLazyByteString)
 import Data.Aeson

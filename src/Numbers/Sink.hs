@@ -19,7 +19,7 @@ module Numbers.Sink (
 
     -- * Sinks
     , logSink
-    , seriesSink
+    , httpSink
     , graphiteSink
     , broadcastSink
     , downstreamSink
@@ -30,7 +30,7 @@ module Numbers.Sink (
 
 import Numbers.Sink.Internal
 import Numbers.Sink.Log
-import Numbers.Sink.Series
+import Numbers.Sink.Http
 import Numbers.Sink.Graphite
 import Numbers.Sink.Broadcast
 import Numbers.Sink.Downstream

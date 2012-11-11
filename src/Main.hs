@@ -32,7 +32,7 @@ main = withSocketsDo $ do
 
     sinks <- sequence $
         catMaybes [ logSink _logEvents
-                  , seriesSink _resolution _interval _httpPort
+                  , httpSink _resolution _interval _httpPort
                   ]
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
