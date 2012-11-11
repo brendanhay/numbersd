@@ -35,9 +35,7 @@ Table of Contents
 ## Functionality
 
 NumbersD has identical aggregation characteristics to StatsD. It differs significantly in terms of
-philosophy and intended usage.
-
-Below are some of the more interesting behaviours available.
+philosophy and intended usage. Below are some of the behaviours available.
 
 ### Listeners
 
@@ -91,6 +89,47 @@ are forwarded upon `flush`, all the others are forwarded unmodified.
 
 
 ## Scenarios
+
+The intent of many of the behaviours above, was to provide more granular mechanisms for scaling and organising
+a herirachy of metric aggregators. Here are some scenarios that prompted the development of NumbersD.
+
+### Monitoring
+
+Using UDP for stats delivery is great, it makes it very easy to write a client and emit metrics but due to the lack
+of reliable transmission it makes unsuitable for more critical tasks, even on a network under your control.
+
+An example monitoring workflow I've observed in production, looks something like:
+
+<a name="figure-1" />
+<p align="center">
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/statsd-monitoring.png" />
+</p>
+**Figure 1**
+
+1. Application emits metrics over the network
+2. Unreliable UDP packets are (hopefully) delivered to a monolithic aggregator instance
+3. The aggregator sends packets over a TCP connection to Graphite
+4. Nagios invokes an NPRE check on the application host
+5. The NPRE check reaches out across the network to the Graphite API to quantify application health
+
+
+There are 4 actors involved in [Figure 1](#figure-1): the Application, Network, Aggregator, Graphite, and Nagios.
+
+For monitoring to be (remotely) reliable we have to make some assumptions .. so in this case lets' remove
+the Network (assume realible UDP transmission) and Nagios (13 year old software always works) from the equation.
+
+If either the aggregator, or Graphite is temporarily unavailable the NPRE check local to the application will
+fail and potentially raise a warning/critical alert.
+
+By removing both the aggregator and Graphite from the monitoring workflow, it becomes a romantic dinner date for
+two between the application and Nagios:
+
+<a name="figure-2" />
+<p align="center">
+  <img src="https://raw.github.com/brendanhay/numbersd/master/img/numbersd-monitoring.png" />
+</p>
+**Figure 2**
+
 
 > TODO
 
