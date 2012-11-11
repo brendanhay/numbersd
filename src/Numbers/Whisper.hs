@@ -23,7 +23,7 @@ module Numbers.Whisper (
     , newWhisper
 
     -- * Insertion
-    , addPoint
+    , addMetric
 
     -- * Serialisation
     , textSeries
