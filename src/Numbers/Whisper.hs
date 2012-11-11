@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TupleSections #-}
 
 -- |
 -- Module      : Numbers.Whisper
@@ -71,7 +71,7 @@ addMetric key val ts = addPoint key (Point ts v)
   where
     v = case val of
         (Counter d) -> d
-        (Timer ds)  -> sum ds / (fromIntegral $ length ds)
+        (Timer ds)  -> sum ds / fromIntegral (length ds)
         (Gauge d)   -> d
         (Set _)     -> 1
 
@@ -98,7 +98,7 @@ jsonSeries to w@Whisper{..} = enc . map f $ allSeries to w
         ]
 
 allSeries :: Time -> Whisper -> [(Key, Series)]
-allSeries to w@Whisper{..} = catMaybes $ map f keys
+allSeries to w@Whisper{..} = mapMaybe f keys
   where
     f k  = (k,) `fmap` series k to w
     keys = M.keys _tmap

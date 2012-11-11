@@ -10,22 +10,36 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.TMap where
+module Numbers.TMap (
+    -- * Opaque
+      TMap
+    , empty
 
+    -- * Functions
+    , toList
+    , lookup
+    , update
+    , delete
+    ) where
+
+import Prelude                hiding (lookup)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.STM
-import Data.Maybe             (fromJust)
+import Data.Maybe                    (fromJust)
 
 import qualified Data.Map as M
 
 newtype TMap k v = TMap (TVar (M.Map k v))
 
 empty :: MonadIO m => m (TMap k v)
-empty = TMap `liftM` (atomic $ newTVar M.empty)
+empty = TMap `liftM` atomic (newTVar M.empty)
+
+toList :: MonadIO m => TMap k v -> m [(k, v)]
+toList (TMap tvar) = M.toList `liftM` liftIO (readTVarIO tvar)
 
 lookup :: (MonadIO m, Ord k) => k -> TMap k v -> m (Maybe v)
-lookup key (TMap tvar) = M.lookup key `liftM` (atomic $ readTVar tvar)
+lookup key (TMap tvar) = M.lookup key `liftM` atomic (readTVar tvar)
 
 update :: (MonadIO m, Ord k) => k -> (Maybe v -> m v) -> TMap k v -> m ()
 update key f (TMap tvar) = do

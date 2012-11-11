@@ -58,4 +58,4 @@ flush key Store{..} = void . forkIO $ do
     ts <- currentTime
     emit _sinks $ Flush key v ts _interval
   where
-    n = (fromInteger _interval) * 1000000
+    n = fromInteger _interval * 1000000
