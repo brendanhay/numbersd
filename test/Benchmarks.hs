@@ -1,5 +1,5 @@
 -- |
--- Module      : Test
+-- Module      : Benchmarks
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,9 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Test where
-
-import Test.QuickCheck
+module Benchmarks where
 
 main :: IO ()
 main = return ()
