@@ -1,7 +1,8 @@
 #!/bin/bash
 
 RANDOM=$$;
-WORDS=(brood bucolic bungalow chatoyant comely conflate cynosure dalliance demesne demure denouement desuetude desultory diaphanous dissemble dulcet ebullience effervescent efflorescence elision elixir eloquence embrocation emollient ephemeral epiphany erstwhile ethereal evanescent evocative fetching felicity forbearance fugacious furtive gambol glamour gossamer halcyon harbinger imbrication imbroglio imbue incipient ineffable ingénue inglenook insouciance inure labyrinthine lagniappe lagoon languor lassitude leisure lilt lissome lithe love mellifluous moiety mondegreen murmurous nemesis offing onomatopoeia opulent palimpsest panacea panoply pastiche penumbra petrichor plethora propinquity pyrrhic quintessential ratatouille ravel redolent riparian ripple scintilla sempiternal seraglio serendipity summery sumptuous surreptitious susquehanna susurrous talisman tintinnabulation umbrella untoward vestigial wafture wherewithal woebegone)
+WORDS=(brood bucolic bungalow chatoyant comely conflate cynosure dalliance demesne demure denouement desuetude)
+# WORDS=(desultory diaphanous dissemble dulcet ebullience effervescent efflorescence elision elixir eloquence embrocation emollient ephemeral epiphany erstwhile ethereal evanescent evocative fetching felicity forbearance fugacious furtive gambol glamour gossamer halcyon harbinger imbrication imbroglio imbue incipient ineffable ingénue inglenook insouciance inure labyrinthine lagniappe lagoon languor lassitude leisure lilt lissome lithe love mellifluous moiety mondegreen murmurous nemesis offing onomatopoeia opulent palimpsest panacea panoply pastiche penumbra petrichor plethora propinquity pyrrhic quintessential ratatouille ravel redolent riparian ripple scintilla sempiternal seraglio serendipity summery sumptuous surreptitious susquehanna susurrous talisman tintinnabulation umbrella untoward vestigial wafture wherewithal woebegone)
 
 usage() {
     echo "Usage: -c [port]"

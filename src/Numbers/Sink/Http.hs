@@ -21,7 +21,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Concurrent.STM
-import Data.Aeson
+import Data.Aeson               hiding (json)
 import Data.Lens.Common                ((^=))
 import Data.Text.Encoding              (decodeUtf8)
 import Network.Wai
@@ -30,25 +30,28 @@ import Network.HTTP.Types              (Status, status200, status404)
 import Numbers.Log
 import Numbers.Types
 import Numbers.Sink.Internal
-import Numbers.Whisper
+
+
+import qualified Numbers.Whisper as W
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.TMap          as M
 
+
 data State = State
-    { _whisper :: TVar Whisper
+    { _whisper :: TVar W.Whisper
     , _stats   :: M.TMap Key Int
     }
 
-httpSink :: Resolution -> Step -> Maybe Integer -> Maybe (IO Sink)
+httpSink :: Int -> Int -> Maybe Int -> Maybe (IO Sink)
 httpSink res step = fmap $ \p -> do
-    whis  <- atomically . newTVar $ newWhisper res step
+    whis  <- atomically . newTVar $ W.newWhisper res step
     stats <- M.empty
 
-    void . forkIO $ run (fromInteger p) (liftIO . serve (State whis stats))
+    void . forkIO $ run p (liftIO . serve (State whis stats))
 
     infoL $ BS.pack "Serving http://0.0.0.0:"
-        +++ p +++ BS.pack "overview.json, and /numbersd.{json,whisper}"
+        +++ p +++ BS.pack "/overview.json, and /numbersd.{json,whisper}"
 
     runSink $ flush ^= \(k, v, ts, _) -> do
         M.update k
@@ -59,11 +62,20 @@ httpSink res step = fmap $ \p -> do
 
         atomically . modifyTVar' whis $ addMetric k v ts
 
+addMetric :: Key -> Metric -> Time -> W.Whisper -> W.Whisper
+addMetric key val ts w = W.update w key ts v
+  where
+    v = case val of
+        (Counter d) -> d
+        (Timer ds)  -> sum ds / fromIntegral (length ds)
+        (Gauge d)   -> d
+        (Set _)     -> 1
+
 serve :: State -> Request -> IO Response
 serve State{..} req = case rawPathInfo req of
     "/overview.json"    -> overview `liftM` M.toList _stats
-    "/numbersd.json"    -> series _whisper jsonSeries jsonType
-    "/numbersd.whisper" -> series _whisper textSeries whisperType
+    "/numbersd.json"    -> series _whisper (W.json $ Time 0) jsonType
+    "/numbersd.whisper" -> series _whisper (W.text $ Time 0) whisperType
     _                   -> return unknown
 
 overview :: [(Key, Int)] -> Response

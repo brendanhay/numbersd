@@ -37,10 +37,10 @@ import qualified Data.ByteString.Char8 as BS
 
 data Config = Help | Version | Config
     { _listeners    :: [Uri]
-    , _httpPort     :: Maybe Integer
-    , _resolution   :: Integer
-    , _interval     :: Integer
-    , _percentiles  :: [Integer]
+    , _httpPort     :: Maybe Int
+    , _resolution   :: Int
+    , _interval     :: Int
+    , _percentiles  :: [Int]
     , _logEvents    :: [String]
     , _prefix       :: String
     , _graphites    :: [Uri]

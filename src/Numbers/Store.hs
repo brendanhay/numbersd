@@ -28,12 +28,12 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.TMap          as M
 
 data Store = Store
-    { _interval :: Integer
+    { _interval :: Int
     , _sinks    :: [Sink]
     , _tmap     :: M.TMap Key Metric
     }
 
-newStore :: Integer -> [Sink] -> IO Store
+newStore :: Int -> [Sink] -> IO Store
 newStore n sinks = Store n sinks `fmap` M.empty
 
 parse :: BS.ByteString -> Store -> IO ()
@@ -53,9 +53,10 @@ bucket key val s@Store{..} = M.update key f _tmap
 
 flush :: Key -> Store -> IO ()
 flush key Store{..} = void . forkIO $ do
-    threadDelay n
-    v  <- M.delete key _tmap
-    ts <- currentTime
-    emit _sinks $ Flush key v ts _interval
+    threadDelay $ _interval * 1000000
+    M.delete key _tmap >>= f
   where
-    n = fromInteger _interval * 1000000
+    f Nothing  = return ()
+    f (Just v) = do
+        ts <- currentTime
+        emit _sinks $ Flush key v ts _interval

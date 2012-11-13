@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TupleSections #-}
 
 -- |
 -- Module      : Numbers.Types
@@ -60,10 +60,13 @@ class Loggable a where
 instance Loggable Builder where
     build = id
 
+instance Loggable [Builder] where
+    build = mconcat
+
 instance Loggable BS.ByteString where
     build = copyByteString
 
-instance Loggable Integer where
+instance Loggable Int where
     build = build . show
 
 instance Loggable Double where
@@ -82,7 +85,7 @@ instance Loggable a => Loggable (Maybe a) where
 -- Investigate how to avoid overlapping instances for
 -- instance Loggable a => Loggable [a] delcaration
 
-instance Loggable [Integer] where
+instance Loggable [Int] where
     build = build . show
 
 instance Loggable [Double] where
@@ -90,7 +93,7 @@ instance Loggable [Double] where
 
 -- ^
 
-newtype Time = Time Integer
+newtype Time = Time Int
     deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
 
 instance Loggable Time where
@@ -99,8 +102,8 @@ instance Loggable Time where
 currentTime :: IO Time
 currentTime = (Time . truncate) `liftM` getPOSIXTime
 
-data Uri = Tcp { _host :: BS.ByteString, _port :: Integer }
-         | Udp { _host :: BS.ByteString, _port :: Integer }
+data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
+         | Udp { _host :: BS.ByteString, _port :: Int }
 
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uri $ BS.pack a, "")
@@ -116,7 +119,7 @@ uri :: Parser Uri
 uri = do
     s <- PC.takeTill (== ':') <* string (BS.pack "://")
     a <- PC.takeTill (== ':') <* PC.char ':'
-    p <- PC.decimal :: Parser Integer
+    p <- PC.decimal :: Parser Int
     return $ case BS.unpack s of
         "tcp"  -> Tcp a p
         "udp"  -> Udp a p

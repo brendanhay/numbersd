@@ -25,6 +25,7 @@ executable numbersd
   default-extensions: FlexibleInstances
                     , RecordWildCards
                     , TypeSynonymInstances
+                    , GeneralizedNewtypeDeriving
   ghc-options:       -Wall -rtsopts -threaded
   ghc-prof-options:  -prof -fprof-auto -auto-all -with-rtsopts=-p
 
@@ -46,31 +47,32 @@ executable numbersd
                     , text
                     , time
                     , transformers
+                    , vector
                     , wai
                     , warp
 
-test-suite numbersd-properties
-  type:               exitcode-stdio-1.0
-  main-is:            Properties.hs
-  hs-source-dirs:     src, test
-  default-language:   Haskell2010
-  default-extensions: RecordWildCards
-  ghc-options:       -main-is Properties -Wall -threaded
+-- test-suite numbersd-properties
+--   type:               exitcode-stdio-1.0
+--   main-is:            Properties.hs
+--   hs-source-dirs:     src, test
+--   default-language:   Haskell2010
+--   default-extensions: RecordWildCards
+--   ghc-options:       -main-is Properties -Wall -threaded
 
-  build-depends:      base
-                    , test-framework
-                    , test-framework-quickcheck2
-                    , test-framework-hunit
-                    , HUnit
-                    , QuickCheck
+--   build-depends:      base
+--                     , test-framework
+--                     , test-framework-quickcheck2
+--                     , test-framework-hunit
+--                     , HUnit
+--                     , QuickCheck
 
-test-suite numbersd-benchmarks
-  type:               exitcode-stdio-1.0
-  main-is:            Benchmarks.hs
-  hs-source-dirs:     src, test
-  default-language:   Haskell2010
-  default-extensions: RecordWildCards
-  ghc-options:       -main-is Benchmarks -Wall -threaded
+-- test-suite numbersd-benchmarks
+--   type:               exitcode-stdio-1.0
+--   main-is:            Benchmarks.hs
+--   hs-source-dirs:     src, test
+--   default-language:   Haskell2010
+--   default-extensions: RecordWildCards
+--   ghc-options:       -main-is Benchmarks -Wall -threaded
 
-  build-depends:      base
-                    , criterion
+--   build-depends:      base
+--                     , criterion
