@@ -1,7 +1,5 @@
-{-# LANGUAGE TupleSections #-}
-
 -- |
--- Module      : Numbers.Whisper.List
+-- Module      : Numbers.Whisper.Series
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -12,7 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper.List (
+module Numbers.Whisper.Series (
     -- * Opaque
       Series
     , create
@@ -96,12 +94,8 @@ create r s ts val | r > 640   = error $ "Resolution to high: " ++ show r
     e  = toInterval s ts
     ps = singleton (r - 1) val
 
--- | TODO: Workout 'from' time slices
 fetch :: Time -> Time -> Series -> Series
 fetch _ to s@SS{..} = append (toInterval step to) 0 s
-
--- Why does 'to' not align in the web api?
--- shouldn't all the to fields be exactly the same?
 
 update :: Time -> Double -> Series -> Series
 update ts val s@SS{..} = append (toInterval step ts) val s

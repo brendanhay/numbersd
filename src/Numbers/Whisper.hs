@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 -- |
 -- Module      : Numbers.Whisper
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -16,22 +14,13 @@ module Numbers.Whisper where
 
 import Blaze.ByteString.Builder (Builder, copyLazyByteString)
 import Data.Aeson
-import Data.Sequence            (Seq, (|>), (><))
 import Numbers.Types
-import Control.Arrow (second)
-
-import Numeric                  (showFFloat)
-import Data.List                (intercalate)
-import Data.Maybe
-import Data.Text                (pack)
+import Control.Arrow            (second)
 import Data.Text.Encoding       (decodeUtf8)
-import Data.Attoparsec.Number   (Number(D))
-import Data.Foldable (toList)
-import Numbers.Whisper.Sequence   (Series)
+import Numbers.Whisper.Series   (Series)
 
-import qualified Data.Map               as M
-import qualified Numbers.Whisper.Sequence as S
-import qualified Data.ByteString.Lazy.Char8 as BL
+import qualified Data.Map                   as M
+import qualified Numbers.Whisper.Series     as S
 
 data Whisper = Whisper
     { _db     :: M.Map Key Series
@@ -60,6 +49,3 @@ update :: Whisper -> Key -> Time -> Double -> Whisper
 update w@Whisper{..} key ts val = w { _db = M.alter (Just . f) key _db }
   where
     f = maybe (S.create _retain _step ts val) (S.update ts val)
-
--- fetch :: Whisper -> Key -> Time -> Time -> Maybe Series
--- fetch w@Whisper{..} key from to = Nothing

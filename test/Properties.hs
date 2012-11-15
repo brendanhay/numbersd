@@ -12,7 +12,7 @@
 
 module Properties where
 
-import Numbers.Whisper.List
+import Numbers.Whisper.Series
 import Numbers.Types
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
@@ -31,6 +31,7 @@ tests =
         , testProperty "new point increments end interval" prop_new_point_increments_end_interval
         , testProperty "far future time discards existing points" prop_future_time_discards_points
         , testProperty "orders points by their insertion time" prop_ordered_by_insertion_time
+        , testProperty "fetch from truncates results" prop_fetch_from_truncates_result
         ]
     ]
 
