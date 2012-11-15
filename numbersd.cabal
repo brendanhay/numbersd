@@ -51,28 +51,74 @@ executable numbersd
                     , wai
                     , warp
 
--- test-suite numbersd-properties
---   type:               exitcode-stdio-1.0
---   main-is:            Properties.hs
---   hs-source-dirs:     src, test
---   default-language:   Haskell2010
---   default-extensions: RecordWildCards
---   ghc-options:       -main-is Properties -Wall -threaded
+test-suite numbersd-properties
+  type:               exitcode-stdio-1.0
+  main-is:            Properties.hs
+  hs-source-dirs:     src, test
+  default-language:   Haskell2010
+  default-extensions: FlexibleInstances
+                    , RecordWildCards
+                    , TypeSynonymInstances
+                    , GeneralizedNewtypeDeriving
+  ghc-options:       -main-is Properties -Wall -threaded
 
---   build-depends:      base
---                     , test-framework
---                     , test-framework-quickcheck2
---                     , test-framework-hunit
---                     , HUnit
---                     , QuickCheck
+  build-depends:      base
+                    , aeson
+                    , attoparsec
+                    , blaze-builder
+                    , bytestring
+                    , cmdargs
+                    , containers
+                    , data-lens
+                    , data-lens-template
+                    , fast-logger
+                    , http-types
+                    , network
+                    , regex-pcre
+                    , split
+                    , stm
+                    , text
+                    , time
+                    , transformers
+                    , vector
+                    , wai
+                    , warp
+                    , test-framework
+                    , test-framework-quickcheck2
+                    , test-framework-hunit
+                    , HUnit
+                    , QuickCheck
 
--- test-suite numbersd-benchmarks
---   type:               exitcode-stdio-1.0
---   main-is:            Benchmarks.hs
---   hs-source-dirs:     src, test
---   default-language:   Haskell2010
---   default-extensions: RecordWildCards
---   ghc-options:       -main-is Benchmarks -Wall -threaded
+benchmark numbersd-benchmarks
+  type:               exitcode-stdio-1.0
+  main-is:            Benchmarks.hs
+  hs-source-dirs:     src, test
+  default-language:   Haskell2010
+  default-extensions: FlexibleInstances
+                    , RecordWildCards
+                    , TypeSynonymInstances
+                    , GeneralizedNewtypeDeriving
+  ghc-options:       -main-is Benchmarks -Wall -threaded
 
---   build-depends:      base
---                     , criterion
+  build-depends:      base
+                    , aeson
+                    , attoparsec
+                    , blaze-builder
+                    , bytestring
+                    , cmdargs
+                    , containers
+                    , criterion
+                    , data-lens
+                    , data-lens-template
+                    , fast-logger
+                    , http-types
+                    , network
+                    , regex-pcre
+                    , split
+                    , stm
+                    , text
+                    , time
+                    , transformers
+                    , vector
+                    , wai
+                    , warp

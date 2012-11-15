@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- |
 -- Module      : Properties
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -12,11 +14,10 @@
 
 module Properties where
 
-import Data.List
+import Numbers.Whisper.List
+import Numbers.Types
 import Test.Framework
-import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
-import Test.HUnit                           hiding (Test)
 import Test.QuickCheck
 
 main :: IO ()
@@ -24,49 +25,81 @@ main = defaultMain tests
 
 tests :: [Test]
 tests =
-    [ testGroup "Sorting Group 1"
-        [ testProperty "sort1" prop_sort1
-        , testProperty "sort2" prop_sort2
-        , testProperty "sort3" prop_sort3
-        ]
-    , testGroup "Sorting Group 2"
-        [ testGroup "Nested Group 1"
-            [ testProperty "sort4" prop_sort4
-            , testProperty "sort5" prop_sort5
-            , testProperty "sort6" prop_sort6
-            ]
-        , testCase "sort7" test_sort7
+    [ testGroup "series"
+        [ testProperty "points_length_equals_resolution" prop_points_length_equals_resolution
+        , testProperty "end interval equals create time" prop_end_equals_create_time
+        , testProperty "start - end diff equals resolution * step" prop_start_end_equals_resolution_step
+        , testProperty "start equals end - resolution * step" prop_start_equals_end_resolution_step
+        , testProperty "new point increments end interval" prop_new_point_increments_end_interval
+        , testProperty "far future time discards existing points" prop_future_time_discards_points
+        -- , testProperty "overwrite point concats value" prop_overwrite_point_concats_value
+        , testProperty "orders points by their insertion time" prop_ordered_by_insertion_time
         ]
     ]
 
-prop_sort1 xs = sort xs == sortBy compare xs
-  where types = (xs :: [Int])
+prop_points_length_equals_resolution :: Series -> Bool
+prop_points_length_equals_resolution series =
+   resolution series == (length $ points series)
 
-prop_sort2 xs =
-        (not (null xs)) ==>
-        (head (sort xs) == minimum xs)
-  where types = (xs :: [Int])
+prop_end_equals_create_time :: Time -> Series -> Bool
+prop_end_equals_create_time ts series =
+    toInterval s ts == end (create (resolution series) s ts 0)
+  where
+    s = step series
 
-prop_sort3 xs = (not (null xs)) ==>
-        last (sort xs) == maximum xs
-  where types = (xs :: [Int])
+prop_start_end_equals_resolution_step :: Series -> Bool
+prop_start_end_equals_resolution_step series =
+    fromIntegral (end series - start series) == (resolution series * step series)
 
-prop_sort4 xs ys =
-        (not (null xs)) ==>
-        (not (null ys)) ==>
-        (head (sort (xs ++ ys)) == min (minimum xs) (minimum ys))
-  where types = (xs :: [Int], ys :: [Int])
+prop_start_equals_end_resolution_step :: Series -> Bool
+prop_start_equals_end_resolution_step series =
+    start series == (end series - fromIntegral (resolution series * step series))
 
-prop_sort5 xs ys =
-        (not (null xs)) ==>
-        (not (null ys)) ==>
-        (head (sort (xs ++ ys)) == max (maximum xs) (maximum ys))
-  where types = (xs :: [Int], ys :: [Int])
+prop_new_point_increments_end_interval :: Double -> Int -> Series -> Bool
+prop_new_point_increments_end_interval x y series =
+    toInterval s ts == end (update ts x series)
+  where
+    ts = Time $ fromIntegral (end series) + (y `mod` s)
+    s  = step series
 
-prop_sort6 xs ys =
-        (not (null xs)) ==>
-        (not (null ys)) ==>
-        (last (sort (xs ++ ys)) == max (maximum xs) (maximum ys))
-  where types = (xs :: [Int], ys :: [Int])
+prop_future_time_discards_points :: Double -> NonNegative Int -> Series -> Bool
+prop_future_time_discards_points x (NonNegative y) series =
+    (x : replicate (r - 1) 0) == (points (update ts x series))
+  where
+    ts = Time $ fromIntegral (end series) + (r * step series) + y
+    r  = resolution series
 
-test_sort7 = sort [8, 7, 2, 5, 4, 9, 6, 1, 0, 3] @?= [0..9]
+prop_ordered_by_insertion_time series =
+    forAll (vector $ resolution series) $ \xs ->
+        reverse xs == (points $ foldl upd series xs)
+  where
+    upd s v = update (incr s) v s
+    incr s  = fromIntegral (end s) + fromIntegral (step s)
+
+-- updating a known list of points into a series past the resolution
+-- should result in the same points  + ordering
+
+-- property to test overwriting of values
+-- get a random series as a list,
+-- pick a point from the list
+-- update a value with the same interval
+-- check the point's new value is equal to +
+-- prop_overwrite_point_concats_value :: Positive Double -> Point -> Bool
+-- prop_overwrite_point_concats_value (Positive n) (Point i series) =
+--     error $ show (n, head . points $ fetch ts ts ss)
+--   where
+--     ss = update ts n series
+--     ts = fromIntegral $ end series
+
+instance Arbitrary Series where
+    arbitrary = do
+        l <- choose (1, 10)
+        s <- choose (1, 100000)
+        t <- arbitrary
+        NonNegative v <- arbitrary
+        return $ create l s t v
+
+instance Arbitrary Time where
+    arbitrary = do
+        NonNegative n <- arbitrary
+        return $ Time n

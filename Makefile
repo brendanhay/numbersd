@@ -21,10 +21,13 @@ conf: clean
 	$(CABAL) configure
 	$(MAKE) build
 
+bench:
+	$(CABAL) configure --enable-benchmarks
+	$(MAKE) build
+
 test:
 	$(CABAL) configure --enable-tests
 	$(MAKE) build
-	$(CABAL) test
 
 prof: clean
 	$(CABAL) configure --enable-executable-profiling

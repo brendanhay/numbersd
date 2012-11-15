@@ -27,10 +27,10 @@ import Data.Text                (pack)
 import Data.Text.Encoding       (decodeUtf8)
 import Data.Attoparsec.Number   (Number(D))
 import Data.Foldable (toList)
-import Numbers.Whisper.Series   (Series)
+import Numbers.Whisper.Sequence   (Series)
 
 import qualified Data.Map               as M
-import qualified Numbers.Whisper.Series as S
+import qualified Numbers.Whisper.Sequence as S
 import qualified Data.ByteString.Lazy.Char8 as BL
 
 data Whisper = Whisper
