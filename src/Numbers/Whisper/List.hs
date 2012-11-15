@@ -40,7 +40,6 @@ import Data.Maybe
 import Data.Text                (pack)
 import Data.Text.Encoding       (decodeUtf8)
 import Numbers.Types
-import Data.Foldable
 
 import qualified Data.Attoparsec.Number as A
 import qualified Data.Vector as V
@@ -65,7 +64,7 @@ resolution :: Series -> Resolution
 resolution = res
 
 start :: Series -> Interval
-start SS{..} = end - (fromIntegral $ length points * step)
+start SS{..} = end - fromIntegral (length points * step)
 
 instance Loggable Interval where
     build (I i) = build i
@@ -76,7 +75,7 @@ instance Loggable Interval where
 --          f v = showFFloat (Just 1) v ""
 
 instance Loggable Series where
-    build s@SS{..} = (start s) +++ "," +++ end +++ "," +++ step
+    build s@SS{..} = start s +++ "," +++ end +++ "," +++ step
                          +++ "|" +++ points
 
 instance ToJSON Interval where
