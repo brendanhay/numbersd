@@ -26,20 +26,10 @@ module Numbers.Whisper.Series (
     , update
     ) where
 
-import Blaze.ByteString.Builder (Builder, copyLazyByteString)
 import Data.Aeson
-import Data.Aeson.Types
-import Numeric                  (showFFloat)
-import Data.Foldable            (toList)
-import Data.List                (intercalate, intersperse)
-import Data.Maybe
-import Data.Text                (pack)
-import Data.Text.Encoding       (decodeUtf8)
+import Data.List     (intersperse)
+import Data.Text     (pack)
 import Numbers.Types
-import Data.Monoid              (mconcat)
-
-import qualified Data.Attoparsec.Number as A
-import qualified Data.Vector as V
 
 type Resolution = Int
 type Step       = Int
