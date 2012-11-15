@@ -15,10 +15,8 @@ module Numbers.Whisper.Series (
       Series
     , create
 
-    , Interval
-    , toInterval
-
     -- * Operations
+    , toInterval
     , resolution
     , step
     , start
@@ -38,6 +36,7 @@ import Data.Maybe
 import Data.Text                (pack)
 import Data.Text.Encoding       (decodeUtf8)
 import Numbers.Types
+import Data.Monoid              (mconcat)
 
 import qualified Data.Attoparsec.Number as A
 import qualified Data.Vector as V
@@ -67,14 +66,11 @@ start SS{..} = end - fromIntegral (length points * step)
 instance Loggable Interval where
     build (I i) = build i
 
--- instance Loggable [Double] where
---     build = build . intercalate "," . map f . toList
---        where
---          f v = showFFloat (Just 1) v ""
-
 instance Loggable Series where
-    build s@SS{..} = start s +++ "," +++ end +++ "," +++ step
-                         +++ "|" +++ points
+    build s@SS{..} = start s +++ "," +++
+        end +++ "," +++
+        step +++ "|" +++
+        intersperse (build ",") (map build points)
 
 instance ToJSON Interval where
     toJSON (I i) = toJSON i
@@ -113,9 +109,6 @@ distance s from to = abs $ ceiling diff
   where
     diff = fromIntegral (abs to - abs from) / fromIntegral s :: Double
 
-extend :: Int -> Double -> [Double] -> [Double]
-extend n val = (singleton n val ++)
-
 replace :: Int -> Double -> [Double] -> [Double]
 replace _ _ []  = []
 replace n val (v:vs)
@@ -124,3 +117,6 @@ replace n val (v:vs)
 
 singleton :: Int -> Double -> [Double]
 singleton n = (: replicate n 0)
+
+extend :: Int -> Double -> [Double] -> [Double]
+extend n val = (singleton n val ++)
