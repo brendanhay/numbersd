@@ -14,13 +14,11 @@ module Properties (main) where
 
 import Properties.Series
 import Test.Framework
-import Test.Framework.Providers.QuickCheck2
-import Test.QuickCheck
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: [Test]
 tests =
-    [ series
+    [ seriesProperties
     ]

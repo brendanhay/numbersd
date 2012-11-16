@@ -19,6 +19,9 @@ module Numbers.Whisper.Series (
     , Series
     , create
 
+    -- * Constants
+    , maxResolution
+
     -- * Operations
     , toInterval
     , resolution
@@ -54,6 +57,9 @@ data Series = SS
 resolution :: Series -> Resolution
 resolution = res
 
+maxResolution :: Resolution
+maxResolution = 5 * 60
+
 start :: Series -> Interval
 start SS{..} = end - fromIntegral (length points * step)
 
@@ -78,11 +84,9 @@ instance ToJSON Series where
         ]
 
 create :: Resolution -> Step -> Time -> Double -> Series
-create r s ts val | r > 640   = error $ "Resolution to high: " ++ show r
-                  | otherwise = SS r s e ps
-  where
-    e  = toInterval s ts
-    ps = singleton (r - 1) val
+create r s ts val
+    | r > maxResolution = error $ "Resolution to high: " ++ show r
+    | otherwise         = SS r s (toInterval s ts) (singleton (r - 1) val)
 
 fetch :: Time -> Time -> Series -> Series
 fetch _ to s@SS{..} = append (toInterval step to) 0 s

@@ -10,7 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Properties.Series (series) where
+module Properties.Series (seriesProperties) where
 
 import Numbers.Whisper.Series
 import Numbers.Types
@@ -18,8 +18,8 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
-series :: Test
-series = testGroup "series"
+seriesProperties :: Test
+seriesProperties = testGroup "series"
     [ testProperty "points length equals resolution" prop_points_length_equals_resolution
     , testProperty "end interval equals create time" prop_end_equals_create_time
     , testProperty "start - end diff equals resolution * step" prop_start_end_equals_resolution_step
@@ -62,6 +62,7 @@ prop_future_time_discards_points x (NonNegative y) series =
     ts = Time $ fromIntegral (end series) + (r * step series) + y
     r  = resolution series
 
+prop_ordered_by_insertion_time :: Series -> Property
 prop_ordered_by_insertion_time series =
     forAll (vector $ resolution series) $ \xs ->
         reverse xs == points (foldl upd series xs)
@@ -71,8 +72,8 @@ prop_ordered_by_insertion_time series =
 
 instance Arbitrary Series where
     arbitrary = do
-        l <- choose (1, 10)
-        s <- choose (1, 100000)
+        l <- choose (1, maxResolution)
+        Positive s <- arbitrary
         t <- arbitrary
         NonNegative v <- arbitrary
         return $ create l s t v
