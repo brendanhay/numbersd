@@ -29,7 +29,7 @@ executable numbersd
   ghc-options:       -Wall -rtsopts -threaded
   ghc-prof-options:  -prof -fprof-auto -auto-all -with-rtsopts=-p
 
-  build-depends:      base
+  build-depends:      base >= 4.5.1.0
                     , aeson
                     , attoparsec
                     , blaze-builder
@@ -62,7 +62,7 @@ test-suite numbersd-properties
                     , GeneralizedNewtypeDeriving
   ghc-options:       -main-is Properties -Wall -threaded
 
-  build-depends:      base
+  build-depends:      base >= 4.5.1.0
                     , aeson
                     , attoparsec
                     , blaze-builder
@@ -100,7 +100,7 @@ benchmark numbersd-benchmarks
                     , GeneralizedNewtypeDeriving
   ghc-options:       -main-is Benchmarks -Wall -threaded
 
-  build-depends:      base
+  build-depends:      base >= 4.5.1.0
                     , aeson
                     , attoparsec
                     , blaze-builder
