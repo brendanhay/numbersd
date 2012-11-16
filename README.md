@@ -1,5 +1,7 @@
 # NumbersD
 
+[![Build Status](https://secure.travis-ci.org/brendanhay/numbersd.png)](http://travis-ci.org/brendanhay/numbersd)
+
 
 Table of Contents
 -----------------
