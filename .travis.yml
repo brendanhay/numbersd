@@ -1,0 +1,8 @@
+language: haskell
+before_install:
+  - cabal install --only-dependencies --enable-tests --force-reinstall
+install:
+  - cabal configure --enable-tests
+  - cabal build
+script:
+  - cabal test --show-details=always
