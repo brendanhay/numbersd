@@ -56,11 +56,9 @@ update key f (TMap tvar) = do
 
 delete :: (MonadIO m, Ord k) => k -> TMap k v -> m (Maybe v)
 delete key (TMap tvar) = atomic $ do
-    (v, m) <- M.updateLookupWithKey del key `liftM` readTVar tvar
+    (v, m) <- M.updateLookupWithKey (\_ _ -> Nothing) key `liftM` readTVar tvar
     writeTVar tvar m
     return v
-  where
-    del _ _ = Nothing
 
 readVar :: MonadIO m => (a -> b) -> TVar a -> m b
 readVar f tvar = f `liftM` atomic (readTVar tvar)

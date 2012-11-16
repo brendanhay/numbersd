@@ -10,23 +10,47 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Whisper where
+module Numbers.Whisper (
+    -- * Opaque
+      Whisper
+    , newWhisper
 
-import Blaze.ByteString.Builder (Builder, copyLazyByteString)
-import Data.Aeson
+    -- * Operations
+    , insert
+
+    -- * Formatters
+    , json
+    , text
+    ) where
+
+import Blaze.ByteString.Builder        (Builder, copyLazyByteString)
+import Control.Arrow                   (second)
+import Data.Aeson               hiding (json)
+import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
-import Control.Arrow            (second)
-import Data.Text.Encoding       (decodeUtf8)
-import Numbers.Whisper.Series   (Series)
+import Numbers.Whisper.Series          (Resolution, Series, Step)
 
-import qualified Data.Map                   as M
-import qualified Numbers.Whisper.Series     as S
+import qualified Data.Map               as M
+import qualified Numbers.Whisper.Series as S
 
 data Whisper = Whisper
-    { _db     :: M.Map Key Series
-    , _retain :: Int
-    , _step   :: Int
+    { res  :: Resolution
+    , step :: Step
+    , db   :: M.Map Key Series
     }
+
+newWhisper :: Resolution -> Step -> Whisper
+newWhisper r s = Whisper (r `div` s) s M.empty
+-- ^ Investigate implications of div absolute rounding torwards zero
+
+insert :: Key -> Metric -> Time -> Whisper -> Whisper
+insert key val ts = update key ts v
+  where
+    v = case val of
+        (Counter d) -> d
+        (Timer ds)  -> sum ds / fromIntegral (length ds)
+        (Gauge d)   -> d
+        (Set _)     -> 1
 
 json :: Time -> Time -> Whisper -> Builder
 json from to = copyLazyByteString . encode . object . map f . fetch from to
@@ -38,14 +62,10 @@ text from to = build . map f . fetch from to
   where
     f (Key k, s) = k +++ "," +++ s +++ "\n"
 
-fetch :: Time -> Time -> Whisper -> [(Key, Series)]
-fetch from to = map (second (S.fetch from to)) . M.toList . _db
-
-newWhisper :: Int -> Int -> Whisper
-newWhisper res step = Whisper M.empty (res `div` step) step
--- ^ Investigate implications of div absolute rounding torwards zero
-
-update :: Whisper -> Key -> Time -> Double -> Whisper
-update w@Whisper{..} key ts val = w { _db = M.alter (Just . f) key _db }
+update :: Key -> Time -> Double -> Whisper -> Whisper
+update key ts val w@Whisper{..} = w { db = M.alter (Just . f) key db }
   where
-    f = maybe (S.create _retain _step ts val) (S.update ts val)
+    f = maybe (S.create res step ts val) (S.update ts val)
+
+fetch :: Time -> Time -> Whisper -> [(Key, Series)]
+fetch from to = map (second (S.fetch from to)) . M.toList . db

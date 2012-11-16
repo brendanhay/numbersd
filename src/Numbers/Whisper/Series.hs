@@ -11,8 +11,12 @@
 --
 
 module Numbers.Whisper.Series (
+    -- * Aliases
+      Resolution
+    , Step
+
     -- * Opaque
-      Series
+    , Series
     , create
 
     -- * Operations

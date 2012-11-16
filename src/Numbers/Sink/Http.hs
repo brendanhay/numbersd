@@ -31,12 +31,9 @@ import Numbers.Log
 import Numbers.Types
 import Numbers.Sink.Internal
 
-
-import qualified Numbers.Whisper as W
-
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.TMap          as M
-
+import qualified Numbers.Whisper       as W
 
 data State = State
     { _whisper :: TVar W.Whisper
@@ -48,51 +45,46 @@ httpSink res step = fmap $ \p -> do
     whis  <- atomically . newTVar $ W.newWhisper res step
     stats <- M.empty
 
+    -- Start the HTTP server
     void . forkIO $ run p (liftIO . serve (State whis stats))
 
     infoL $ BS.pack "Serving http://0.0.0.0:"
         +++ p +++ BS.pack "/overview.json, and /numbersd.{json,whisper}"
 
+    -- Start a thread for flush events
     runSink $ flush ^= \(k, v, ts, _) -> do
+
+--      \\ Work on internal counters and overview
+
+        -- Update counters
         M.update k
              (\n -> return $ case n of
                    Just x  -> x + 1 :: Int
                    Nothing -> 1)
              stats
 
-        atomically . modifyTVar' whis $ addMetric k v ts
-
-addMetric :: Key -> Metric -> Time -> W.Whisper -> W.Whisper
-addMetric key val ts w = W.update w key ts v
-  where
-    v = case val of
-        (Counter d) -> d
-        (Timer ds)  -> sum ds / fromIntegral (length ds)
-        (Gauge d)   -> d
-        (Set _)     -> 1
+        -- Store time series
+        atomically . modifyTVar' whis $ W.insert k v ts
 
 serve :: State -> Request -> IO Response
 serve State{..} req = case rawPathInfo req of
     "/overview.json"    -> overview `liftM` M.toList _stats
-    "/numbersd.json"    -> series _whisper (W.json $ Time 0) jsonType
-    "/numbersd.whisper" -> series _whisper (W.text $ Time 0) whisperType
-    _                   -> return unknown
+    "/numbersd.json"    -> series (W.json $ Time 0) jsonType
+    "/numbersd.whisper" -> series (W.text $ Time 0) whisperType
+    _                   -> unknown
+  where
+    series f typ = do
+        t <- currentTime
+        w <- readTVarIO _whisper
+        return . response status200 typ $ f t w
+    unknown = return . response status404 jsonType
+        $ copyByteString "{\"error\": \"Not Found\"}"
 
 overview :: [(Key, Int)] -> Response
 overview = response status200 jsonType . body
   where
     body = copyLazyByteString . encode . object . map f
     f (Key k, v) = decodeUtf8 k .= v
-
-series :: TVar a -> (Time -> a -> Builder) -> BS.ByteString -> IO Response
-series tvar f typ = do
-    t <- currentTime
-    w <- readTVarIO tvar
-    return . response status200 typ $ f t w
-
-unknown :: Response
-unknown = response status404 jsonType
-    $ copyByteString "{\"error\": \"Not Found\"}"
 
 response :: Status -> BS.ByteString -> Builder -> Response
 response status typ = ResponseBuilder status [("Content-Type", typ)]
