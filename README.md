@@ -2,8 +2,8 @@
 
 [![Build Status](https://secure.travis-ci.org/brendanhay/numbersd.png)](http://travis-ci.org/brendanhay/numbersd)
 
-> Travis CI uses base 4.5.0 which contains an incompatible `Control.Concurrent.STM` API
-> The Cabal file specifies the correct base dependency version.
+> Travis CI uses base 4.5.0 which contains an incompatible `Control.Concurrent.STM` API.
+> The `numbersd.cabal` file specifies the correct base dependency version.
 
 Table of Contents
 -----------------
