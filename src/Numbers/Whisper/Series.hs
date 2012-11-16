@@ -28,7 +28,7 @@ module Numbers.Whisper.Series (
     , step
     , start
     , end
-    , points
+    , values
     , fetch
     , update
     ) where
@@ -54,11 +54,14 @@ data Series = SS
     , points :: [Double]
     } deriving (Show)
 
+maxResolution :: Resolution
+maxResolution = 5 * 60
+
 resolution :: Series -> Resolution
 resolution = res
 
-maxResolution :: Resolution
-maxResolution = 5 * 60
+values :: Series -> [Double]
+values = reverse . points
 
 start :: Series -> Interval
 start SS{..} = end - fromIntegral (length points * step)
@@ -70,7 +73,7 @@ instance Loggable Series where
     build s@SS{..} = start s +++ "," +++
         end +++ "," +++
         step +++ "|" +++
-        intersperse (build ",") (map build points)
+        intersperse (build ",") (map build $ values s)
 
 instance ToJSON Interval where
     toJSON (I i) = toJSON i
@@ -80,7 +83,7 @@ instance ToJSON Series where
         [ pack "start"  .= start s
         , pack "end"    .= end
         , pack "step"   .= step
-        , pack "values" .= points
+        , pack "values" .= values s
         ]
 
 create :: Resolution -> Step -> Time -> Double -> Series
