@@ -41,6 +41,7 @@ import Data.List                         (intercalate, intersperse)
 import Data.Maybe
 import Data.Monoid
 import Data.Time.Clock.POSIX
+import Numeric                           (showFFloat)
 import Text.Regex.PCRE            hiding (match)
 
 import qualified Data.Attoparsec.Char8 as PC
@@ -70,7 +71,7 @@ instance Loggable Int where
     build = build . show
 
 instance Loggable Double where
-    build = build . show
+    build n = build $ showFFloat (Just 1) n ""
 
 instance Loggable String where
     build = build . BS.pack
