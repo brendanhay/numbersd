@@ -12,13 +12,48 @@
 
 module Numbers.Sink.Graphite (
       graphiteSink
+
+    -- * Testing .....
+    , encode
+    , flatten
     ) where
 
+import Numeric               (showFFloat)
 import Data.Lens.Common
 import Numbers.Log
 import Numbers.Sink.Internal
+import Numbers.Socket
 import Numbers.Types
 
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Set              as S
+
 graphiteSink :: String -> Uri -> IO Sink
-graphiteSink _ _ = runSink $
-    flush ^= \(k, v, ts, _) -> infoL $ "Graphite: " +++ k ++& v ++& ts
+graphiteSink prefix uri = do
+    sock <- connect uri
+    runSink $ flush ^= flushMetric prefix sock
+
+flushMetric :: String -> Socket -> (Key, Metric, Time, Int) -> IO ()
+flushMetric prefix sock evt = do
+    let bs = encode evt
+    send sock $ bs `BS.append` BS.pack "\n"
+    infoL $ "Graphite: " +++ bs
+
+encode :: (Key, Metric, Time, Int) -> BS.ByteString
+encode (Key key, val, Time ts, _) =
+    BS.append key . BS.pack $ concat
+        [ " "
+        , flatten val
+        , " "
+        , show ts
+        , "\n"
+        ]
+
+flatten :: Metric -> String
+flatten val = showFFloat (Just 2) x ""
+  where
+    x = case val of
+            (Counter n) -> n
+            (Timer  ns) -> sum ns
+            (Gauge   n) -> n
+            (Set    ss) -> S.fold (+) 0 ss

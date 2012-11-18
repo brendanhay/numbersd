@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- |
 -- Module      : Properties.Series
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -14,6 +16,7 @@ module Properties.Series (seriesProperties) where
 
 import Numbers.Whisper.Series
 import Numbers.Types
+import Properties.Generators                ()
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
@@ -77,8 +80,3 @@ instance Arbitrary Series where
         t <- arbitrary
         NonNegative v <- arbitrary
         return $ create l s t v
-
-instance Arbitrary Time where
-    arbitrary = do
-        NonNegative n <- arbitrary
-        return $ Time n

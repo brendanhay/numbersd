@@ -131,27 +131,27 @@ data Metric = Counter Double
             | Timer [Double]
             | Gauge Double
             | Set (S.Set Double)
-              deriving (Eq, Ord)
+              deriving (Eq, Ord, Show)
 
 instance ToJSON Metric where
     toJSON v = case v of
         (Counter n) -> toJSON n
-        (Timer ns)  -> toJSON ns
-        (Gauge n)   -> toJSON n
-        (Set ss)    -> toJSON $ S.toAscList ss
+        (Timer  ns) -> toJSON ns
+        (Gauge   n) -> toJSON n
+        (Set    ss) -> toJSON $ S.toAscList ss
 
 instance Loggable Metric where
     build v = case v of
         (Counter n) -> "Counter " +++ n
-        (Timer ns)  -> "Timer " +++ ns
-        (Gauge n)   -> "Gauge " +++ n
-        (Set ss)    -> "Set " +++ S.toAscList ss
+        (Timer  ns) -> "Timer " +++ ns
+        (Gauge   n) -> "Gauge " +++ n
+        (Set    ss) -> "Set " +++ S.toAscList ss
 
 instance Loggable [Metric] where
     build = mconcat . intersperse (build ",") . map build
 
 newtype Key = Key BS.ByteString
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
 
 instance Loggable Key where
     build (Key k) = build k
@@ -161,15 +161,15 @@ instance Loggable [Key] where
 
 zero :: Metric -> Bool
 zero (Counter 0) = True
-zero (Timer [])  = True
-zero (Gauge 0)   = True
-zero (Set x)     = x == S.empty
+zero (Timer  []) = True
+zero (Gauge   0) = True
+zero (Set     x) = x == S.empty
 zero _           = False
 
 aggregate :: Metric -> Metric -> Metric
 aggregate (Counter x) (Counter y) = Counter $ x + y
-aggregate (Timer x)   (Timer y)   = Timer $ x ++ y
-aggregate (Set x)     (Set y)     = Set $ x `S.union` y
+aggregate (Timer   x) (Timer   y) = Timer $ x ++ y
+aggregate (Set     x) (Set     y) = Set $ x `S.union` y
 aggregate _           right       = right
 
 average :: Metric -> Metric -> Metric

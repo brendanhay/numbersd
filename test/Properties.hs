@@ -12,6 +12,7 @@
 
 module Properties (main) where
 
+import Properties.GraphiteSink
 import Properties.Series
 import Test.Framework
 
@@ -20,5 +21,6 @@ main = defaultMain tests
 
 tests :: [Test]
 tests =
-    [ seriesProperties
+    [ graphiteProperties
+    , seriesProperties
     ]
