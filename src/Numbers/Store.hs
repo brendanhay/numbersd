@@ -21,6 +21,7 @@ module Numbers.Store (
 
 import Control.Monad
 import Control.Concurrent
+import Control.Concurrent.Async
 import Numbers.Sink
 import Numbers.Types
 
@@ -49,10 +50,10 @@ bucket :: Key -> Metric -> Store -> IO ()
 bucket key val s@Store{..} = M.update key f _tmap
   where
     f (Just x) = return $ x `aggregate` val
-    f Nothing  = flush key s >> return val
+    f Nothing  = flush key s >>= link >> return val
 
-flush :: Key -> Store -> IO ()
-flush key Store{..} = void . forkIO $ do
+flush :: Key -> Store -> IO (Async ())
+flush key Store{..} = async $ do
     threadDelay $ _interval * 1000000
     M.delete key _tmap >>= f
   where
