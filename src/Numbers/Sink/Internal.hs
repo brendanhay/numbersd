@@ -28,9 +28,9 @@ module Numbers.Sink.Internal (
     , flush
     ) where
 
-import Control.Applicative    hiding (empty)
+import Control.Applicative      hiding (empty)
 import Control.Monad
-import Control.Concurrent            (forkIO)
+import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Data.Lens.Template
 import Numbers.Types
@@ -58,7 +58,8 @@ emit sinks evt = forM_ sinks (\s -> atomically $ writeTQueue (_events s) evt)
 runSink :: (Sink -> Sink) -> IO Sink
 runSink lens = do
     s <- newSink lens
-    forkSink s
+    a <- forkSink s
+    link a
     return s
 
 newSink :: (Sink -> Sink) -> IO Sink
@@ -66,8 +67,8 @@ newSink = flip liftM $ Sink f f f f <$> atomically newTQueue
   where
     f _ = return ()
 
-forkSink :: Sink -> IO ()
-forkSink Sink{..} = void . forkIO . forever $ do
+forkSink :: Sink -> IO (Async ())
+forkSink Sink{..} = async . forever $ do
     e <- atomically $ readTQueue _events
     case e of
         (Receive bs)     -> _receive bs

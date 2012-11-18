@@ -19,7 +19,7 @@ module Numbers.Sink.Http (
 import Blaze.ByteString.Builder hiding (flush)
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Concurrent
+import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Data.Aeson               hiding (json)
 import Data.Lens.Common                ((^=))
@@ -46,7 +46,8 @@ httpSink res step = fmap $ \p -> do
     stats <- M.empty
 
     -- Start the HTTP server
-    void . forkIO $ run p (liftIO . serve (State whis stats))
+    a <- async $ run p (liftIO . serve (State whis stats))
+    link a
 
     infoL $ BS.pack "Serving http://0.0.0.0:"
         +++ p +++ BS.pack "/overview.json, and /numbersd.{json,whisper}"
