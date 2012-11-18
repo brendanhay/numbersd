@@ -97,6 +97,7 @@ fetch _ to s@SS{..} = append (toInterval step to) 0 s
 update :: Time -> Double -> Series -> Series
 update ts val s@SS{..} = append (toInterval step ts) val s
 
+
 append :: Interval -> Double -> Series -> Series
 append to val s@SS{..} = s { points = take res p, end = e }
   where
