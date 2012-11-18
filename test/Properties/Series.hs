@@ -22,7 +22,7 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
 seriesProperties :: Test
-seriesProperties = testGroup "series"
+seriesProperties = testGroup "time series"
     [ testProperty "values length equals resolution" prop_values_length_equals_resolution
     , testProperty "end interval equals create time" prop_end_equals_create_time
     , testProperty "start - end diff equals resolution * step" prop_start_end_equals_resolution_step

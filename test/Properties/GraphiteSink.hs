@@ -13,7 +13,6 @@
 module Properties.GraphiteSink (graphiteProperties) where
 
 import Control.Applicative        hiding (empty)
-import Data.Attoparsec.ByteString
 import Data.Maybe
 import Numbers.Sink.Graphite
 import Numbers.Types
@@ -23,8 +22,6 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
 import qualified Data.Attoparsec.Char8 as PC
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Set              as S
 
 graphiteProperties :: Test
 graphiteProperties = testGroup "graphite sink"
@@ -33,7 +30,8 @@ graphiteProperties = testGroup "graphite sink"
 
 prop_format :: Key -> Metric -> Time -> Int -> Bool
 prop_format key val ts n =
-    (key, read $ flatten val, ts) == fromJust (decode format $ encode (key, val, ts, n))
+    (key, read $ flatten val, ts) ==
+        fromJust (decode format $ encode (key, val, ts, n))
   where
     format = do
         k <- PC.takeTill (== ' ') <* PC.char ' '
