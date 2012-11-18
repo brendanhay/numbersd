@@ -25,25 +25,26 @@ module Numbers.Whisper (
 
 import Blaze.ByteString.Builder        (Builder, copyLazyByteString)
 import Control.Arrow                   (second)
+import Control.Monad                   (liftM)
 import Data.Aeson               hiding (json)
 import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
-import qualified Data.Map               as M
+import qualified Numbers.TMap           as M
 import qualified Numbers.Whisper.Series as S
 
 data Whisper = Whisper
     { res  :: Resolution
     , step :: Step
-    , db   :: M.Map Key Series
+    , db   :: M.TMap Key Series
     }
 
-newWhisper :: Resolution -> Step -> Whisper
-newWhisper r s = Whisper (r `div` s) s M.empty
+newWhisper :: Resolution -> Step -> IO Whisper
+newWhisper r s = Whisper (r `div` s) s `liftM` M.empty
 -- ^ Investigate implications of div absolute rounding torwards zero
 
-insert :: Key -> Metric -> Time -> Whisper -> Whisper
+insert :: Key -> Metric -> Time -> Whisper -> IO ()
 insert key val ts = update key ts v
   where
     v = case val of
@@ -52,20 +53,21 @@ insert key val ts = update key ts v
         (Gauge d)   -> d
         (Set _)     -> 1
 
-json :: Time -> Time -> Whisper -> Builder
-json from to = copyLazyByteString . encode . object . map f . fetch from to
+json :: Time -> Time -> Whisper -> IO Builder
+json from to w = fetch from to w >>=
+    return . copyLazyByteString . encode . object . map f
   where
     f (Key k, s) = decodeUtf8 k .= toJSON s
 
-text :: Time -> Time -> Whisper -> Builder
-text from to = build . map f . fetch from to
+text :: Time -> Time -> Whisper -> IO Builder
+text from to w = fetch from to w >>= return . build . map f
   where
     f (Key k, s) = k +++ "," +++ s +++ "\n"
 
-update :: Key -> Time -> Double -> Whisper -> Whisper
-update key ts val w@Whisper{..} = w { db = M.alter (Just . f) key db }
+update :: Key -> Time -> Double -> Whisper -> IO ()
+update key ts val Whisper{..} = M.update key f db
   where
-    f = maybe (S.create res step ts val) (S.update ts val)
+    f = maybe (return $ S.create res step ts val) (return . S.update ts val)
 
-fetch :: Time -> Time -> Whisper -> [(Key, Series)]
-fetch from to = map (second (S.fetch from to)) . M.toList . db
+fetch :: Time -> Time -> Whisper -> IO [(Key, Series)]
+fetch from to w = map (second (S.fetch from to)) `liftM` M.toList (db w)

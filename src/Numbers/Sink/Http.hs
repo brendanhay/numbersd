@@ -20,7 +20,6 @@ import Blaze.ByteString.Builder hiding (flush)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.Async
-import Control.Concurrent.STM
 import Data.Aeson               hiding (json)
 import Data.Lens.Common                ((^=))
 import Data.Text.Encoding              (decodeUtf8)
@@ -36,48 +35,37 @@ import qualified Numbers.TMap          as M
 import qualified Numbers.Whisper       as W
 
 data State = State
-    { _whisper :: TVar W.Whisper
-    , _stats   :: M.TMap Key Int
+    { _whis  :: W.Whisper
+    , _stats :: M.TMap Key Int
     }
 
 httpSink :: Int -> Int -> Maybe Int -> Maybe (IO Sink)
 httpSink res step = fmap $ \p -> do
-    whis  <- atomically . newTVar $ W.newWhisper res step
     stats <- M.empty
+    whis  <- W.newWhisper res step
 
     -- Start the HTTP server
-    a <- async $ run p (liftIO . serve (State whis stats))
-    link a
+    async (run p $ liftIO . serve (State whis stats)) >>= link
 
     infoL $ BS.pack "Serving http://0.0.0.0:"
         +++ p +++ BS.pack "/overview.json, and /numbersd.{json,whisper}"
 
     -- Start a thread for flush events
     runSink $ flush ^= \(k, v, ts, _) -> do
-
---      \\ Work on internal counters and overview
-
-        -- Update counters
-        M.update k
-             (\n -> return $ case n of
-                   Just x  -> x + 1 :: Int
-                   Nothing -> 1)
-             stats
-
+        -- TODO: Work on internal counters and overview
         -- Store time series
-        atomically . modifyTVar' whis $ W.insert k v ts
+        W.insert k v ts whis
 
 serve :: State -> Request -> IO Response
 serve State{..} req = case rawPathInfo req of
-    "/overview.json"    -> overview `liftM` M.toList _stats
+    "/overview.json"    -> return $ overview []
     "/numbersd.json"    -> series (W.json $ Time 0) jsonType
     "/numbersd.whisper" -> series (W.text $ Time 0) whisperType
     _                   -> unknown
   where
     series f typ = do
         t <- currentTime
-        w <- readTVarIO _whisper
-        return . response status200 typ $ f t w
+        response status200 typ `liftM` f t _whis
     unknown = return . response status404 jsonType
         $ copyByteString "{\"error\": \"Not Found\"}"
 
