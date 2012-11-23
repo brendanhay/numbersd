@@ -25,8 +25,8 @@ import Control.Concurrent.Async
 import Numbers.Sink
 import Numbers.Types
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Numbers.Concurrent.TMap          as M
+import qualified Data.ByteString.Char8   as BS
+import qualified Numbers.Concurrent.TMap as M
 
 data Store = Store
     { _interval :: Int
