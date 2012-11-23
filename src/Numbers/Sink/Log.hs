@@ -23,7 +23,7 @@ import Numbers.Types
 logSink :: [String] -> Maybe (IO Sink)
 logSink []   = Nothing
 logSink evts = Just $ do
-    infoL $ "Logging " <&& (intercalate ", " evts) &&> " events"
+    infoL $ "Logging " <&& intercalate ", " evts &&> " events"
     runSink $ \s -> foldl f s (ts infoL)
   where
     f s (k, g) = if k `elem` evts then g s else s

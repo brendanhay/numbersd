@@ -57,20 +57,20 @@ insert key val ts w@Whisper{..} =
     mapM_ (\(k, v) -> update k ts v w) $ calculate quant res pref key val
 
 json :: Time -> Time -> Whisper -> IO Builder
-json from to w = fetch from to w >>=
-    return . copyLazyByteString . encode . object . map f
+json from to w =
+    (copyLazyByteString . encode . object . map f) `liftM` fetch from to w
   where
     f (k, s) = decodeUtf8 k .= toJSON s
 
 text :: Time -> Time -> Whisper -> IO Builder
-text from to w = fetch from to w >>= return . build . map f
+text from to w = (build . map f) `liftM` fetch from to w
   where
     f (k, s) = k &&> "," &&& s &&> "\n"
 
 update :: BS.ByteString -> Time -> Double -> Whisper -> IO ()
 update key ts val Whisper{..} = M.update key f db
   where
-    f = maybe (return $ S.create res step ts val) (return . S.update ts val)
+    f = return . maybe (S.create res step ts val) (S.update ts val)
 
 fetch :: Time -> Time -> Whisper -> IO [(BS.ByteString, Series)]
 fetch from to w = map (second (S.fetch from to)) `liftM` M.toList (db w)

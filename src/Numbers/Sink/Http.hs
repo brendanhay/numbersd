@@ -54,7 +54,7 @@ httpSink qs res step pref = fmap $ \port -> do
         &&> "/overview.json, and /numbersd.{json,whisper}"
 
     -- Start a thread for flush events
-    runSink $ flush ^= \(k, v, ts, _) -> do
+    runSink $ flush ^= \(k, v, ts, _) ->
         -- TODO: Work on internal counters and overview
         -- Store time series
         W.insert k v ts w
