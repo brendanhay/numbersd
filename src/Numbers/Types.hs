@@ -15,6 +15,7 @@
 module Numbers.Types (
     -- * Type Classes
       Loggable(..)
+    , sbuild
 
     -- * Exported Types
     , Time(..)
@@ -26,9 +27,9 @@ module Numbers.Types (
     , currentTime
     , zero
     , aggregate
-    , average
+    , calculate
+    , metricParser
     , decode
-    , metric
     ) where
 
 import Blaze.ByteString.Builder
@@ -37,26 +38,38 @@ import Control.Applicative        hiding (empty)
 import Control.Monad
 import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
-import Data.List                         (intercalate, intersperse)
+import Data.List                  hiding (sort)
 import Data.Maybe
-import Data.Monoid
+import Data.Monoid                       (mconcat, mappend, mempty)
 import Data.Time.Clock.POSIX
 import Numeric                           (showFFloat)
+import Statistics.Sample
+import Statistics.Function               (sort)
 import Text.Regex.PCRE            hiding (match)
 
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Set              as S
+import qualified Data.Vector           as V
 
 class Loggable a where
     build :: Loggable a => a -> Builder
-    (+++) :: (Loggable a, Loggable b) => a -> b -> Builder
-    (++\) :: (Loggable a, Loggable b) => a -> b -> Builder
-    (++&) :: (Loggable a, Loggable b) => a -> b -> Builder
 
-    a +++ b = build a `mappend` build b
-    a ++\ b = a +++ b +++ BS.pack "\n"
-    a ++& b = a +++ BS.pack " " +++ b
+    (&&&) :: (Loggable a, Loggable b) => a -> b -> Builder
+    (<&&)  :: Loggable a => String -> a -> Builder
+    (&&>)  :: Loggable a => a -> String -> Builder
+
+    infixr 7 &&&
+    infixr 9 <&&
+    infixr 8 &&>
+
+    a &&& b = build a `mappend` build b
+    a <&& b  = build a &&& b
+    a &&> b  = a &&& build b
+
+sbuild :: String -> Builder
+sbuild = build . BS.pack
+{-# INLINE sbuild #-}
 
 instance Loggable Builder where
     build = id
@@ -94,6 +107,9 @@ instance Loggable [Double] where
 
 -- ^
 
+instance Loggable (V.Vector Double) where
+    build = build . V.toList
+
 newtype Time = Time Int
     deriving (Eq, Ord, Show, Enum, Num, Real, Integral)
 
@@ -107,18 +123,18 @@ data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
          | Udp { _host :: BS.ByteString, _port :: Int }
 
 instance Read Uri where
-    readsPrec _ a = return (fromJust . decode uri $ BS.pack a, "")
+    readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
 
 instance Loggable Uri where
-    build (Tcp h p) = "tcp://" +++ h +++ ":" +++ p
-    build (Udp h p) = "udp://" +++ h +++ ":" +++ p
+    build (Tcp h p) = "tcp://" <&& h &&& ":" <&& p
+    build (Udp h p) = "udp://" <&& h &&& ":" <&& p
 
 instance Loggable [Uri] where
-    build = mconcat . intersperse (build ", ") . map build
+    build = mconcat . intersperse (sbuild ", ") . map build
 
-uri :: Parser Uri
-uri = do
-    s <- PC.takeTill (== ':') <* string (BS.pack "://")
+uriParser :: Parser Uri
+uriParser = do
+    s <- PC.takeTill (== ':') <* string "://"
     a <- PC.takeTill (== ':') <* PC.char ':'
     p <- PC.decimal :: Parser Int
     return $ case BS.unpack s of
@@ -127,29 +143,6 @@ uri = do
         _      -> error "Unrecognized uri scheme"
                   -- ^ TODO: investigate purposeful parser failures
 
-data Metric = Counter Double
-            | Timer [Double]
-            | Gauge Double
-            | Set (S.Set Double)
-              deriving (Eq, Ord, Show)
-
-instance ToJSON Metric where
-    toJSON v = case v of
-        (Counter n) -> toJSON n
-        (Timer  ns) -> toJSON ns
-        (Gauge   n) -> toJSON n
-        (Set    ss) -> toJSON $ S.toAscList ss
-
-instance Loggable Metric where
-    build v = case v of
-        (Counter n) -> "Counter " +++ n
-        (Timer  ns) -> "Timer " +++ ns
-        (Gauge   n) -> "Gauge " +++ n
-        (Set    ss) -> "Set " +++ S.toAscList ss
-
-instance Loggable [Metric] where
-    build = mconcat . intersperse (build ",") . map build
-
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord, Show)
 
@@ -157,30 +150,39 @@ instance Loggable Key where
     build (Key k) = build k
 
 instance Loggable [Key] where
-    build = mconcat . intersperse (build ",") . map build
+    build = mconcat . intersperse (sbuild ",") . map build
 
-zero :: Metric -> Bool
-zero (Counter 0) = True
-zero (Timer  []) = True
-zero (Gauge   0) = True
-zero (Set     x) = x == S.empty
-zero _           = False
-
-aggregate :: Metric -> Metric -> Metric
-aggregate (Counter x) (Counter y) = Counter $ x + y
-aggregate (Timer   x) (Timer   y) = Timer $ x ++ y
-aggregate (Set     x) (Set     y) = Set $ x `S.union` y
-aggregate _           right       = right
-
-average :: Metric -> Metric -> Metric
-average a b@(Counter _) = Counter $ x / 2
+keyParser :: Parser Key
+keyParser = Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
   where
-    (Counter x) = a `aggregate` b
-average _ right         = right
+    strip s = foldl (flip $ uncurry replace) s unsafe
 
-metric :: Parser (Key, Metric)
-metric = do
-    k <- Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
+data Metric = Counter Double
+            | Timer [Double]
+            | Gauge Double
+            | Set (S.Set Double)
+              deriving (Eq, Ord, Show)
+
+instance ToJSON Metric where
+    toJSON m = case m of
+        (Counter v) -> toJSON v
+        (Timer  vs) -> toJSON vs
+        (Gauge   v) -> toJSON v
+        (Set    ss) -> toJSON $ S.toAscList ss
+
+instance Loggable Metric where
+    build m = case m of
+        (Counter v) -> "Counter " <&& v
+        (Timer  vs) -> "Timer "   <&& vs
+        (Gauge   v) -> "Gauge "   <&& v
+        (Set    ss) -> "Set "     <&& S.toAscList ss
+
+instance Loggable [Metric] where
+    build = mconcat . intersperse (sbuild ",") . map build
+
+metricParser :: Parser (Key, Metric)
+metricParser = do
+    k <- keyParser
     v <- PC.double <* PC.char '|'
     t <- PC.anyChar
     r <- optional (PC.char '|' *> PC.char '@' *> PC.double)
@@ -190,8 +192,76 @@ metric = do
             'g' -> Gauge v
             's' -> Set $ S.singleton v
             _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- Div by zero
+
+zero :: Metric -> Bool
+zero (Counter 0) = True
+zero (Timer  []) = True
+zero (Gauge   0) = True
+zero (Set    ss) = S.null ss
+zero _           = False
+
+aggregate :: Metric -> Metric -> Metric
+aggregate (Counter x) (Counter y) = Counter $ x + y
+aggregate (Timer   x) (Timer   y) = Timer   $ x ++ y
+aggregate (Set     x) (Set     y) = Set     $ x `S.union` y
+aggregate _           right       = right
+
+calculate :: [Int]         -- ^ Quantiles
+          -> Int           -- ^ Period
+          -> BS.ByteString -- ^ Prefix
+          -> Key
+          -> Metric
+          -> [(BS.ByteString, Double)]
+calculate qs n p k m = flatten p k $ case m of
+    (Counter v) -> counter n v
+    (Timer  vs) -> timer qs vs
+    (Gauge   v) -> gauge v
+    (Set    ss) -> set ss
+
+data Label = P BS.ByteString BS.ByteString Double
+           | L BS.ByteString Double
+    deriving (Show)
+
+flatten :: BS.ByteString -> Key -> [Label] -> [(BS.ByteString, Double)]
+flatten p (Key k) = map (first BS.concat . f)
   where
-    strip s = foldl (flip $ uncurry replace) s unsafe
+    f (P a b v) = ([p, a, k, b], v)
+    f (L a v)   = ([p, a, k], v)
+
+counter :: Int -> Double -> [Label]
+counter n v =
+    [ L ".counters." $ v / (fromIntegral n / 1000)
+    , P ".counters." ".count" v
+    ]
+
+gauge :: Double -> [Label]
+gauge v = [L ".gauges." v]
+
+set :: S.Set Double -> [Label]
+set ss = [P ".sets." ".count" . fromIntegral $ S.size ss]
+
+timer :: [Int] -> [Double] -> [Label]
+timer qs vs = concatMap (`quantile` xs) qs ++
+    [ P ".timers." ".std"   $ stdDev xs
+    , P ".timers." ".upper" $ V.last xs
+    , P ".timers." ".lower" $ V.head xs
+    , P ".timers." ".count" . fromIntegral $ V.length xs
+    , P ".timers." ".sum"   $ V.sum xs
+    , P ".timers." ".mean"  $ mean xs
+    ]
+  where
+    xs = sort $ V.fromList vs
+
+quantile :: Int -> V.Vector Double -> [Label]
+quantile q xs =
+    [ P ".timers." (a ".mean_")  $ mean ys
+    , P ".timers." (a ".upper_") $ V.last ys
+    , P ".timers." (a ".sum_")   $ V.sum ys
+    ]
+  where
+    ys = V.take n xs
+    n  = round $ fromIntegral q / 100 * (fromIntegral $ V.length xs :: Double)
+    a  = flip BS.append (BS.pack $ show q)
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty

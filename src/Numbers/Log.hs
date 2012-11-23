@@ -25,7 +25,7 @@ errorL :: Loggable a => a -> IO ()
 errorL = logL defaultLogger
 
 logL :: Loggable a => Logger -> a -> IO ()
-logL logger s = loggerPutBuilder logger $ s +++ "\n"
+logL logger s = loggerPutBuilder logger $ s &&> "\n"
 
 defaultLogger :: Logger
 defaultLogger = unsafePerformIO $ mkLogger True stdout

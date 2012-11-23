@@ -52,17 +52,17 @@ $(makeLens ''Config)
 
 instance Loggable Config where
     build Config{..} = mconcat
-        [ build "Configuration: \n"
-        , " -> Listeners:      " ++\ _listeners
-        , " -> HTTP Port:      " ++\ _httpPort
-        , " -> Resolution:     " ++\ _resolution
-        , " -> Flush Interval: " ++\ _interval
-        , " -> Percentiles:    " ++\ _percentiles
-        , " -> Log Events:     " ++\ _logEvents
-        , " -> Prefix:         " ++\ _prefix
-        , " -> Graphites:      " ++\ _graphites
-        , " -> Broadcasts:     " ++\ _broadcasts
-        , " -> Downstreams:    " +++ _downstreams
+        [ sbuild "Configuration:"
+        , "\n -> Listeners:      " <&& _listeners
+        , "\n -> HTTP Port:      " <&& _httpPort
+        , "\n -> Resolution:     " <&& _resolution
+        , "\n -> Flush Interval: " <&& _interval
+        , "\n -> Percentiles:    " <&& _percentiles
+        , "\n -> Log Events:     " <&& _logEvents
+        , "\n -> Prefix:         " <&& _prefix
+        , "\n -> Graphites:      " <&& _graphites
+        , "\n -> Broadcasts:     " <&& _broadcasts
+        , "\n -> Downstreams:    " <&& _downstreams
         ]
     build _ = mempty
 

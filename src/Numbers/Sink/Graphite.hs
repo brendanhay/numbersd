@@ -14,8 +14,8 @@ module Numbers.Sink.Graphite (
       graphiteSink
 
     -- * Testing .....
-    , encode
-    , flatten
+    -- , encode
+    -- , flatten
     ) where
 
 import Numeric               (showFFloat)
@@ -31,29 +31,24 @@ import qualified Data.Set              as S
 graphiteSink :: String -> Uri -> IO Sink
 graphiteSink prefix uri = do
     sock <- connect uri
-    runSink $ flush ^= flushMetric prefix sock
+    runSink $ flush ^= (\_ -> return ())
 
-flushMetric :: String -> Socket -> (Key, Metric, Time, Int) -> IO ()
-flushMetric prefix sock evt = do
-    let bs = encode evt
-    send sock $ bs `BS.append` BS.pack "\n"
-    infoL $ "Graphite: " +++ bs
+-- flushMetric prefix sock
 
-encode :: (Key, Metric, Time, Int) -> BS.ByteString
-encode (Key key, val, Time ts, _) =
-    BS.append key . BS.pack $ concat
-        [ " "
-        , flatten val
-        , " "
-        , show ts
-        , "\n"
-        ]
+-- flushMetric :: String -> Socket -> (Key, Metric, Time, Int) -> IO ()
+-- flushMetric prefix sock (key, val, ts, n) = do
+--     let bs = encode key val ts n
+--     send sock $ bs `BS.append` "\n"
+--     infoL $ "Graphite: " <&& bs
 
-flatten :: Metric -> String
-flatten val = showFFloat (Just 2) x ""
-  where
-    x = case val of
-            (Counter n) -> n
-            (Timer  ns) -> sum ns
-            (Gauge   n) -> n
-            (Set    ss) -> S.fold (+) 0 ss
+-- encode :: Key -> Metric -> Time -> Int -> BS.ByteString
+-- encode (Key key) val ts n =
+--     map f flatten metric ts n
+--     BS.append key . BS.concat
+--         [ " "
+--         , val
+--         , " "
+--         , BS.pack $ show ts
+--         , "\n"
+--         ]
+

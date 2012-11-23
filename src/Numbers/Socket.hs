@@ -49,7 +49,7 @@ listen uri = do
     setSocketOption _sock ReuseAddr 1
     bindSocket _sock _addr
     when (tcp uri) (S.listen _sock maxListenQueue)
-    infoL $ "Listening on " +++ uri
+    infoL $ "Listening on " <&& uri
     return s
 
 accept :: Socket -> IO Socket
@@ -62,7 +62,7 @@ connect uri = do
     s@Socket{..} <- open uri
     when (tcp uri) (setSocketOption _sock KeepAlive 1)
     S.connect _sock _addr
-    infoL $ "Connected to " +++ uri
+    infoL $ "Connected to " <&& uri
     return s
 
 send :: Socket -> BS.ByteString -> IO ()

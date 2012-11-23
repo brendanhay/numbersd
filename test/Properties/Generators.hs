@@ -14,6 +14,7 @@
 
 module Properties.Generators where
 
+import Control.Applicative ((<$>))
 import Numbers.Types
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
@@ -24,17 +25,17 @@ import qualified Data.Set              as S
 
 -- TODO: Relax the restriction
 instance Arbitrary BS.ByteString where
-    arbitrary = BS.pack `fmap` listOf1 (elements ['A'..'z'])
+    arbitrary = BS.pack <$> listOf1 (elements ['A'..'z'])
 
 instance Arbitrary Key where
-    arbitrary = Key `fmap` arbitrary
+    arbitrary = Key <$> arbitrary
 
 instance Arbitrary Metric where
     arbitrary = oneof
-        [ Counter `fmap` arbitrary
-        , Timer   `fmap` arbitrary
-        , Gauge   `fmap` arbitrary
-        , Set     `fmap` arbitrary
+        [ Counter <$> arbitrary
+        , Timer   <$> arbitrary
+        , Gauge   <$> arbitrary
+        , Set     <$> arbitrary
         ]
 
 instance Arbitrary Time where
@@ -43,4 +44,5 @@ instance Arbitrary Time where
         return $ Time n
 
 instance (Ord k, Arbitrary k) => Arbitrary (S.Set k) where
-    arbitrary = S.fromList `fmap` arbitrary
+    arbitrary = S.fromList <$> arbitrary
+

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- |
 -- Module      : Numbers.Sink.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -42,13 +40,12 @@ data State = State
 httpSink :: Int -> Int -> Maybe Int -> Maybe (IO Sink)
 httpSink res step = fmap $ \p -> do
     stats <- M.empty
-    whis  <- W.newWhisper res step
+    whis  <- W.newWhisper [90] res step "stats"
 
     -- Start the HTTP server
     async (run p $ liftIO . serve (State whis stats)) >>= link
 
-    infoL $ BS.pack "Serving http://0.0.0.0:"
-        +++ p +++ BS.pack "/overview.json, and /numbersd.{json,whisper}"
+    infoL $ "Serving http://0.0.0.0:" <&& p &&> "/overview.json, and /numbersd.{json,whisper}"
 
     -- Start a thread for flush events
     runSink $ flush ^= \(k, v, ts, _) -> do

@@ -42,7 +42,7 @@ parse bstr s@Store{..} = do
     emit _sinks $ Receive bstr
     forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
-    f b = case decode metric b of
+    f b = case decode metricParser b of
         Just (k, v) -> bucket k v s
         Nothing     -> emit _sinks $ Invalid bstr
 

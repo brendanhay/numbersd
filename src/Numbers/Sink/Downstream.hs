@@ -21,4 +21,4 @@ import Numbers.Types
 
 downstreamSink :: Uri -> IO Sink
 downstreamSink _ = runSink $
-    flush ^= \(k, v, ts, _) -> infoL $ "Upstream: " +++ k ++& v ++& ts
+    flush ^= \(k, v, ts, _) -> infoL $ "Upstream: " <&& k &&& v &&& ts

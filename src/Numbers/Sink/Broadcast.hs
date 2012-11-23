@@ -24,5 +24,5 @@ broadcastSink :: Uri -> IO Sink
 broadcastSink uri = do
     sock <- connect uri
     runSink $ receive ^= \b -> do
-        infoL $ "Broadcast: " +++ b +++ " to " +++ uri
+        infoL $ "Broadcast: " <&& b &&> " to " &&& uri
         send sock b

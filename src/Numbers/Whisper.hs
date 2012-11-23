@@ -31,43 +31,41 @@ import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
+import qualified Data.ByteString.Char8  as BS
 import qualified Numbers.TMap           as M
 import qualified Numbers.Whisper.Series as S
 
 data Whisper = Whisper
-    { res  :: Resolution
+    { quant :: [Int]
+    , pref :: BS.ByteString
+    , res  :: Resolution
     , step :: Step
-    , db   :: M.TMap Key Series
+    , db   :: M.TMap BS.ByteString Series
     }
 
-newWhisper :: Resolution -> Step -> IO Whisper
-newWhisper r s = Whisper (r `div` s) s `liftM` M.empty
+newWhisper :: [Int] -> Resolution -> Step -> BS.ByteString -> IO Whisper
+newWhisper qs r s p = Whisper qs p (r `div` s) s `liftM` M.empty
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Key -> Metric -> Time -> Whisper -> IO ()
-insert key val ts = update key ts v
-  where
-    v = case val of
-        (Counter d) -> d
-        (Timer ds)  -> sum ds / fromIntegral (length ds)
-        (Gauge d)   -> d
-        (Set _)     -> 1
+insert key val ts w@Whisper{..} =
+    mapM_ (\(k, v) -> update k ts v w) $ calculate quant res pref key val
 
 json :: Time -> Time -> Whisper -> IO Builder
 json from to w = fetch from to w >>=
     return . copyLazyByteString . encode . object . map f
   where
-    f (Key k, s) = decodeUtf8 k .= toJSON s
+    f (k, s) = decodeUtf8 k .= toJSON s
 
 text :: Time -> Time -> Whisper -> IO Builder
 text from to w = fetch from to w >>= return . build . map f
   where
-    f (Key k, s) = k +++ "," +++ s +++ "\n"
+    f (k, s) = k &&> "," &&& s &&> "\n"
 
-update :: Key -> Time -> Double -> Whisper -> IO ()
+update :: BS.ByteString -> Time -> Double -> Whisper -> IO ()
 update key ts val Whisper{..} = M.update key f db
   where
     f = maybe (return $ S.create res step ts val) (return . S.update ts val)
 
-fetch :: Time -> Time -> Whisper -> IO [(Key, Series)]
+fetch :: Time -> Time -> Whisper -> IO [(BS.ByteString, Series)]
 fetch from to w = map (second (S.fetch from to)) `liftM` M.toList (db w)

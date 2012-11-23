@@ -70,8 +70,8 @@ instance Loggable Interval where
     build (I i) = build i
 
 instance Loggable Series where
-    build s@SS{..} = start s +++ "," +++ end +++ "," +++ step +++ "|" +++
-        intersperse (build ",") (map build $ values s)
+    build s@SS{..} = start s &&& "," <&& end &&& "," <&& step &&& "|"
+        <&& intersperse (sbuild ",") (map build $ values s)
 
 instance ToJSON Interval where
     toJSON (I i) = toJSON i

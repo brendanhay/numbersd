@@ -1,3 +1,5 @@
+{-# LANGUAGE NoOverloadedStrings #-}
+
 -- |
 -- Module      : Main
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
