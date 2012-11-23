@@ -29,7 +29,7 @@ import Numbers.Types
 import Numbers.Sink.Internal
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Numbers.TMap          as M
+import qualified Numbers.Concurrent.TMap          as M
 import qualified Numbers.Whisper       as W
 
 data State = State

@@ -32,7 +32,7 @@ import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
 import qualified Data.ByteString.Char8  as BS
-import qualified Numbers.TMap           as M
+import qualified Numbers.Concurrent.TMap           as M
 import qualified Numbers.Whisper.Series as S
 
 data Whisper = Whisper
