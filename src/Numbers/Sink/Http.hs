@@ -37,21 +37,27 @@ data State = State
     , _stats :: M.TMap Key Int
     }
 
-httpSink :: Int -> Int -> Maybe Int -> Maybe (IO Sink)
-httpSink res step = fmap $ \p -> do
-    stats <- M.empty
-    whis  <- W.newWhisper [90] res step "stats"
+httpSink :: [Int]         -- ^ Quantiles
+         -> Int           -- ^ Resolution
+         -> Int           -- ^ Step
+         -> BS.ByteString -- ^ Prefix
+         -> Maybe Int     -- ^ Port
+         -> Maybe (IO Sink)
+httpSink qs res step pref = fmap $ \port -> do
+    s <- M.empty
+    w <- W.newWhisper qs res step pref
 
     -- Start the HTTP server
-    async (run p $ liftIO . serve (State whis stats)) >>= link
+    async (run port $ liftIO . serve (State w s)) >>= link
 
-    infoL $ "Serving http://0.0.0.0:" <&& p &&> "/overview.json, and /numbersd.{json,whisper}"
+    infoL $ "Serving http://0.0.0.0:" <&& port
+        &&> "/overview.json, and /numbersd.{json,whisper}"
 
     -- Start a thread for flush events
     runSink $ flush ^= \(k, v, ts, _) -> do
         -- TODO: Work on internal counters and overview
         -- Store time series
-        W.insert k v ts whis
+        W.insert k v ts w
 
 serve :: State -> Request -> IO Response
 serve State{..} req = case rawPathInfo req of

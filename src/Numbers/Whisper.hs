@@ -37,14 +37,19 @@ import qualified Numbers.Whisper.Series  as S
 
 data Whisper = Whisper
     { quant :: [Int]
-    , pref :: BS.ByteString
-    , res  :: Resolution
-    , step :: Step
-    , db   :: M.TMap BS.ByteString Series
+    , pref  :: BS.ByteString
+    , res   :: Resolution
+    , step  :: Step
+    , db    :: M.TMap BS.ByteString Series
     }
 
-newWhisper :: [Int] -> Resolution -> Step -> BS.ByteString -> IO Whisper
-newWhisper qs r s p = Whisper qs p (r `div` s) s `liftM` M.empty
+newWhisper :: [Int]         -- ^ Quantiles
+           -> Int           -- ^ Resolution
+           -> Int           -- ^ Step
+           -> BS.ByteString -- ^ Prefix
+           -> IO Whisper
+newWhisper qs res step pref =
+    Whisper qs pref (res `div` step) step `liftM` M.empty
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Key -> Metric -> Time -> Whisper -> IO ()
