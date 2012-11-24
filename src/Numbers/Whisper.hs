@@ -32,46 +32,33 @@ import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
 import qualified Control.Concurrent.STM.Map as M
-import qualified Data.ByteString.Char8      as BS
 import qualified Numbers.Whisper.Series     as S
 
 data Whisper = Whisper
-    { quant :: [Int]
-    , pref  :: BS.ByteString
-    , res   :: Resolution
+    { res   :: Resolution
     , step  :: Step
-    , db    :: M.Map BS.ByteString Series
+    , db    :: M.Map Key Series
     }
 
-newWhisper :: [Int]         -- ^ Quantiles
-           -> Int           -- ^ Resolution
-           -> Int           -- ^ Step
-           -> BS.ByteString -- ^ Prefix
-           -> IO Whisper
-newWhisper qs res step pref =
-    Whisper qs pref (res `div` step) step `liftM` M.empty
+newWhisper :: Int -> Int -> IO Whisper
+newWhisper res step = Whisper (res `div` step) step `liftM` M.empty
 -- ^ Investigate implications of div absolute rounding torwards zero
 
-insert :: Key -> Metric -> Time -> Whisper -> IO ()
-insert key m ts w@Whisper{..} = mapM_ (\(k, v) -> update k ts v w) f
+insert :: Time -> Point -> Whisper -> IO ()
+insert ts (P k v) Whisper{..} = M.update k f db
   where
-    f = map (flatten pref key) (calculate quant res m)
+    f = return . maybe (S.create res step ts v) (S.update ts v)
 
 json :: Time -> Time -> Whisper -> IO Builder
 json from to w =
     (copyLazyByteString . encode . object . map f) `liftM` fetch from to w
   where
-    f (k, s) = decodeUtf8 k .= toJSON s
+    f (Key k, s) = decodeUtf8 k .= toJSON s
 
 text :: Time -> Time -> Whisper -> IO Builder
 text from to w = (build . map f) `liftM` fetch from to w
   where
-    f (k, s) = k &&> "," &&& s &&> "\n"
+    f (Key k, s) = k &&> "," &&& s &&> "\n"
 
-update :: BS.ByteString -> Time -> Double -> Whisper -> IO ()
-update key ts val Whisper{..} = M.update key f db
-  where
-    f = return . maybe (S.create res step ts val) (S.update ts val)
-
-fetch :: Time -> Time -> Whisper -> IO [(BS.ByteString, Series)]
-fetch from to w = map (second (S.fetch from to)) `liftM` M.toList (db w)
+fetch :: Time -> Time -> Whisper -> IO [(Key, Series)]
+fetch from to Whisper{..} = map (second (S.fetch from to)) `liftM` M.toList db

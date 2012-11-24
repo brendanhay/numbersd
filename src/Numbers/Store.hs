@@ -29,13 +29,14 @@ import qualified Control.Concurrent.STM.Map as M
 import qualified Data.ByteString.Char8      as BS
 
 data Store = Store
-    { _interval :: Int
-    , _sinks    :: [Sink]
-    , _tmap     :: M.Map Key Metric
+    { _percentiles :: [Int]
+    , _interval    :: Int
+    , _sinks       :: [Sink]
+    , _tmap        :: M.Map Key Metric
     }
 
-newStore :: Int -> [Sink] -> IO Store
-newStore n sinks = Store n sinks `fmap` M.empty
+newStore :: [Int] -> Int -> [Sink] -> IO Store
+newStore qs n sinks = Store qs n sinks `fmap` M.empty
 
 parse :: BS.ByteString -> Store -> IO ()
 parse bstr s@Store{..} = do
@@ -60,4 +61,5 @@ flush key Store{..} = async $ do
     f Nothing  = return ()
     f (Just v) = do
         ts <- currentTime
-        emit _sinks $ Flush key v ts _interval
+        mapM_ (emit _sinks . Flush ts)
+            $ calculate _percentiles _interval key v

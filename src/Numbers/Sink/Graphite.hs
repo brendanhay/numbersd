@@ -31,7 +31,7 @@ import qualified Data.Set              as S
 graphiteSink :: String -> Uri -> IO Sink
 graphiteSink prefix uri = do
     sock <- connect uri
-    runSink $ flush ^= (\_ -> return ())
+    runSink $ flush ^= (\_ _ -> return ())
 
 -- flushMetric prefix sock
 

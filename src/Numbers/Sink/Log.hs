@@ -29,6 +29,6 @@ logSink evts = Just $ do
     f s (k, g) = if k `elem` evts then g s else s
     ts l = [ ("receive", receive ^= \v -> l $ "Receive: " <&& v)
            , ("invalid", invalid ^= \v -> l $ "Invalid: " <&& v)
-           , ("parse", parse   ^= \(k, v) -> l $ "Parse: " <&& k &&& " " <&& v)
-           , ("flush", flush   ^= \(k, v, _, _) -> l $ "Flush: " <&& k &&& " " <&& v)
+           , ("parse", parse   ^= \k v -> l $ "Parse: " <&& k &&& " " <&& v)
+           , ("flush", flush   ^= \_ p -> l $ "Flush: " <&& p)
            ]

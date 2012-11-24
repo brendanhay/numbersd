@@ -34,7 +34,7 @@ main = withSocketsDo $ do
 
     sinks <- sequence $
         catMaybes [ logSink _logEvents
-                  , httpSink _percentiles _resolution _interval (BS.pack _prefix) _httpPort
+                  , httpSink _resolution _interval _httpPort
                   ]
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
@@ -42,7 +42,7 @@ main = withSocketsDo $ do
 
     infoL "Sinks started..."
 
-    store <- newStore _interval sinks
+    store <- newStore _percentiles _interval sinks
     buf   <- atomically newTQueue
 
     infoL "Buffering..."

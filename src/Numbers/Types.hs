@@ -22,12 +22,12 @@ module Numbers.Types (
     , Uri(..)
     , Key(..)
     , Metric(..)
+    , Point(..)
 
     -- * Functions
     , currentTime
     , zero
     , aggregate
-    , flatten
     , calculate
     , metricParser
     , decode
@@ -41,7 +41,8 @@ import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
 import Data.List                  hiding (sort)
 import Data.Maybe
-import Data.Monoid                       (mconcat, mappend, mempty)
+import Data.Monoid
+import Data.String
 import Data.Time.Clock.POSIX
 import Numeric                           (showFFloat)
 import Statistics.Function               (sort)
@@ -147,6 +148,13 @@ uriParser = do
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord, Show)
 
+instance IsString Key where
+    fromString = Key . BS.pack
+
+instance Monoid Key where
+    (Key a) `mappend` (Key b) = Key $ BS.concat [a, ".", b]
+    mempty = Key ""
+
 instance Loggable Key where
     build (Key k) = build k
 
@@ -207,47 +215,42 @@ aggregate (Timer   x) (Timer   y) = Timer   $ x ++ y
 aggregate (Set     x) (Set     y) = Set     $ x `S.union` y
 aggregate _           right       = right
 
-data Point = P BS.ByteString BS.ByteString Double
-           | S BS.ByteString Double
+data Point = P Key Double
     deriving (Show)
 
-flatten :: BS.ByteString -> Key -> Point -> (BS.ByteString, Double)
-flatten p (Key k) pnt = (BS.concat $ intersperse "." (p:xs), v')
-  where
-    (xs, v') = case pnt of
-        P a b v -> ([a, k, b], v)
-        S a v   -> ([a, k], v)
+instance Loggable Point where
+    build (P k v) = k &&> " " &&& v
 
-calculate :: [Int] -> Int -> Metric -> [Point]
-calculate _ n (Counter v) =
-    [ S "counters" $ v / (fromIntegral n / 1000)
-    , P "counters" "count" v
+calculate :: [Int] -> Int -> Key -> Metric -> [Point]
+calculate _  n k (Counter v) =
+    [ P ("counters" <> k) (v / (fromIntegral n / 1000))
+    , P ("counters" <> k <> "count") v
     ]
-calculate _ _ (Gauge v) =
-    [ S "gauges" v ]
-calculate _ _ (Set ss) =
-    [ P "sets" "count" . fromIntegral $ S.size ss ]
-calculate qs _ (Timer vs) = concatMap (`quantile` xs) qs ++
-    [ P "timers" "std"   $ stdDev xs
-    , P "timers" "upper" $ V.last xs
-    , P "timers" "lower" $ V.head xs
-    , P "timers" "count" . fromIntegral $ V.length xs
-    , P "timers" "sum"   $ V.sum xs
-    , P "timers" "mean"  $ mean xs
+calculate _  _ k (Gauge v) =
+    [ P ("gauges" <> k) v ]
+calculate _  _ k (Set ss) =
+    [ P ("sets" <> k <> "count") (fromIntegral $ S.size ss) ]
+calculate qs _ k (Timer vs) = concatMap (quantile k xs) qs <>
+    [ P ("timers" <> k <> "std") $ stdDev xs
+    , P ("timers" <> k <> "upper") $ V.last xs
+    , P ("timers" <> k <> "lower") $ V.head xs
+    , P ("timers" <> k <> "count") . fromIntegral $ V.length xs
+    , P ("timers" <> k <> "sum")   $ V.sum xs
+    , P ("timers" <> k <> "mean")  $ mean xs
     ]
   where
     xs = sort $ V.fromList vs
 
-quantile :: Int -> V.Vector Double -> [Point]
-quantile q xs =
-    [ P "timers" (a "mean_")  $ mean ys
-    , P "timers" (a "upper_") $ V.last ys
-    , P "timers" (a "sum_")   $ V.sum ys
+quantile :: Key -> V.Vector Double -> Int -> [Point]
+quantile k xs q =
+    [ P ("timers" <> k <> a "mean_")  $ mean ys
+    , P ("timers" <> k <> a "upper_") $ V.last ys
+    , P ("timers" <> k <> a "sum_")   $ V.sum ys
     ]
   where
     ys = V.take n xs
     n  = round $ fromIntegral q / 100 * (fromIntegral $ V.length xs :: Double)
-    a  = flip BS.append (BS.pack $ show q)
+    a  = Key . (`BS.append` BS.pack (show q))
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty

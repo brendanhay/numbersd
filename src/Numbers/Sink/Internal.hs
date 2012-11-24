@@ -40,13 +40,13 @@ import qualified Data.ByteString.Char8 as BS
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
-           | Flush Key Metric Time Int
+           | Flush Time Point
 
 data Sink = Sink
     { _receive :: BS.ByteString -> IO ()
     , _invalid :: BS.ByteString -> IO ()
-    , _parse   :: (Key, Metric) -> IO ()
-    , _flush   :: (Key, Metric, Time, Int) -> IO ()
+    , _parse   :: Key -> Metric -> IO ()
+    , _flush   :: Time -> Point -> IO ()
     , _events  :: TQueue Event
     }
 
@@ -63,15 +63,18 @@ runSink lens = do
     return s
 
 newSink :: (Sink -> Sink) -> IO Sink
-newSink = flip liftM $ Sink f f f f <$> atomically newTQueue
-  where
-    f _ = return ()
+newSink = flip liftM $ Sink
+    (\_ -> return ())
+    (\_ -> return ())
+    (\_ _ -> return ())
+    (\_ _ -> return ())
+    <$> atomically newTQueue
 
 forkSink :: Sink -> IO (Async ())
 forkSink Sink{..} = async . forever $ do
     e <- atomically $ readTQueue _events
     case e of
-        (Receive bs)     -> _receive bs
-        (Invalid bs)     -> _invalid bs
-        (Parse k v)      -> _parse (k, v)
-        (Flush k v ts n) -> _flush (k, v, ts, n)
+        Receive bs -> _receive bs
+        Invalid bs -> _invalid bs
+        Parse k v  -> _parse k v
+        Flush ts p -> _flush ts p
