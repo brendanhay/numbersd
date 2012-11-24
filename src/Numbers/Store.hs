@@ -25,13 +25,13 @@ import Control.Concurrent.Async
 import Numbers.Sink
 import Numbers.Types
 
-import qualified Data.ByteString.Char8   as BS
-import qualified Numbers.Concurrent.TMap as M
+import qualified Control.Concurrent.STM.Map as M
+import qualified Data.ByteString.Char8      as BS
 
 data Store = Store
     { _interval :: Int
     , _sinks    :: [Sink]
-    , _tmap     :: M.TMap Key Metric
+    , _tmap     :: M.Map Key Metric
     }
 
 newStore :: Int -> [Sink] -> IO Store

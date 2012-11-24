@@ -20,13 +20,14 @@ module Numbers.Types (
     -- * Exported Types
     , Time(..)
     , Uri(..)
-    , Metric(..)
     , Key(..)
+    , Metric(..)
 
     -- * Functions
     , currentTime
     , zero
     , aggregate
+    , flatten
     , calculate
     , metricParser
     , decode
@@ -43,8 +44,8 @@ import Data.Maybe
 import Data.Monoid                       (mconcat, mappend, mempty)
 import Data.Time.Clock.POSIX
 import Numeric                           (showFFloat)
-import Statistics.Sample
 import Statistics.Function               (sort)
+import Statistics.Sample
 import Text.Regex.PCRE            hiding (match)
 
 import qualified Data.Attoparsec.Char8 as PC
@@ -206,57 +207,42 @@ aggregate (Timer   x) (Timer   y) = Timer   $ x ++ y
 aggregate (Set     x) (Set     y) = Set     $ x `S.union` y
 aggregate _           right       = right
 
-calculate :: [Int]         -- ^ Quantiles
-          -> Int           -- ^ Period
-          -> BS.ByteString -- ^ Prefix
-          -> Key
-          -> Metric
-          -> [(BS.ByteString, Double)]
-calculate qs n p k m = flatten p k $ case m of
-    (Counter v) -> counter n v
-    (Timer  vs) -> timer qs vs
-    (Gauge   v) -> gauge v
-    (Set    ss) -> set ss
-
-data Label = P BS.ByteString BS.ByteString Double
-           | L BS.ByteString Double
+data Point = P BS.ByteString BS.ByteString Double
+           | S BS.ByteString Double
     deriving (Show)
 
-flatten :: BS.ByteString -> Key -> [Label] -> [(BS.ByteString, Double)]
-flatten p (Key k) = map (first BS.concat . f)
+flatten :: BS.ByteString -> Key -> Point -> (BS.ByteString, Double)
+flatten p (Key k) pnt = (BS.concat $ intersperse "." (p:xs), v')
   where
-    f (P a b v) = ([p, a, k, b], v)
-    f (L a v)   = ([p, a, k], v)
+    (xs, v') = case pnt of
+        P a b v -> ([a, k, b], v)
+        S a v   -> ([a, k], v)
 
-counter :: Int -> Double -> [Label]
-counter n v =
-    [ L ".counters." $ v / (fromIntegral n / 1000)
-    , P ".counters." ".count" v
+calculate :: [Int] -> Int -> Metric -> [Point]
+calculate _ n (Counter v) =
+    [ S "counters" $ v / (fromIntegral n / 1000)
+    , P "counters" "count" v
     ]
-
-gauge :: Double -> [Label]
-gauge v = [L ".gauges." v]
-
-set :: S.Set Double -> [Label]
-set ss = [P ".sets." ".count" . fromIntegral $ S.size ss]
-
-timer :: [Int] -> [Double] -> [Label]
-timer qs vs = concatMap (`quantile` xs) qs ++
-    [ P ".timers." ".std"   $ stdDev xs
-    , P ".timers." ".upper" $ V.last xs
-    , P ".timers." ".lower" $ V.head xs
-    , P ".timers." ".count" . fromIntegral $ V.length xs
-    , P ".timers." ".sum"   $ V.sum xs
-    , P ".timers." ".mean"  $ mean xs
+calculate _ _ (Gauge v) =
+    [ S "gauges" v ]
+calculate _ _ (Set ss) =
+    [ P "sets" "count" . fromIntegral $ S.size ss ]
+calculate qs _ (Timer vs) = concatMap (`quantile` xs) qs ++
+    [ P "timers" "std"   $ stdDev xs
+    , P "timers" "upper" $ V.last xs
+    , P "timers" "lower" $ V.head xs
+    , P "timers" "count" . fromIntegral $ V.length xs
+    , P "timers" "sum"   $ V.sum xs
+    , P "timers" "mean"  $ mean xs
     ]
   where
     xs = sort $ V.fromList vs
 
-quantile :: Int -> V.Vector Double -> [Label]
+quantile :: Int -> V.Vector Double -> [Point]
 quantile q xs =
-    [ P ".timers." (a ".mean_")  $ mean ys
-    , P ".timers." (a ".upper_") $ V.last ys
-    , P ".timers." (a ".sum_")   $ V.sum ys
+    [ P "timers" (a "mean_")  $ mean ys
+    , P "timers" (a "upper_") $ V.last ys
+    , P "timers" (a "sum_")   $ V.sum ys
     ]
   where
     ys = V.take n xs

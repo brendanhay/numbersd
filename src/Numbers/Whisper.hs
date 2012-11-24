@@ -31,16 +31,16 @@ import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
-import qualified Data.ByteString.Char8   as BS
-import qualified Numbers.Concurrent.TMap as M
-import qualified Numbers.Whisper.Series  as S
+import qualified Control.Concurrent.STM.Map as M
+import qualified Data.ByteString.Char8      as BS
+import qualified Numbers.Whisper.Series     as S
 
 data Whisper = Whisper
     { quant :: [Int]
     , pref  :: BS.ByteString
     , res   :: Resolution
     , step  :: Step
-    , db    :: M.TMap BS.ByteString Series
+    , db    :: M.Map BS.ByteString Series
     }
 
 newWhisper :: [Int]         -- ^ Quantiles
@@ -53,8 +53,9 @@ newWhisper qs res step pref =
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Key -> Metric -> Time -> Whisper -> IO ()
-insert key val ts w@Whisper{..} =
-    mapM_ (\(k, v) -> update k ts v w) $ calculate quant res pref key val
+insert key m ts w@Whisper{..} = mapM_ (\(k, v) -> update k ts v w) f
+  where
+    f = map (flatten pref key) (calculate quant res m)
 
 json :: Time -> Time -> Whisper -> IO Builder
 json from to w =

@@ -11,3 +11,5 @@ Procfile
 *.aux*
 *.ps*
 *.hp*
+TAGS
+tags

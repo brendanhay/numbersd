@@ -28,13 +28,13 @@ import Numbers.Log
 import Numbers.Types
 import Numbers.Sink.Internal
 
-import qualified Data.ByteString.Char8   as BS
-import qualified Numbers.Concurrent.TMap as M
-import qualified Numbers.Whisper         as W
+import qualified Control.Concurrent.STM.Map as M
+import qualified Data.ByteString.Char8      as BS
+import qualified Numbers.Whisper            as W
 
 data State = State
     { _whis  :: W.Whisper
-    , _stats :: M.TMap Key Int
+    , _stats :: M.Map Key Int
     }
 
 httpSink :: [Int]         -- ^ Quantiles

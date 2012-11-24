@@ -8,10 +8,13 @@ CABAL=`which cabal-dev`
 
 all: build
 
-build:
+tags:
+	find . -name \*.\*hs | xargs hasktags
+
+build: tags
 	$(CABAL) build
 
-install:
+install: tags
 	$(CABAL) install
 
 clean:
@@ -35,3 +38,4 @@ prof: clean
 
 ghci:
 	$(CABAL) ghci
+

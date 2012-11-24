@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Concurrent.TMap
+-- Module      : Control.Concurrent.STM.Map
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,9 +10,9 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Concurrent.TMap (
+module Control.Concurrent.STM.Map (
     -- * Opaque
-      TMap
+      Map
     , empty
 
     -- * Functions
@@ -31,31 +31,31 @@ import Control.Concurrent.STM
 
 import qualified Data.Map as M
 
-newtype TMap k v = TMap (TVar (M.Map k v))
+newtype Map k v = Map (TVar (M.Map k v))
 
-empty :: MonadIO m => m (TMap k v)
-empty = TMap `liftM` atomic (newTVar M.empty)
+empty :: MonadIO m => m (Map k v)
+empty = Map `liftM` atomic (newTVar M.empty)
 
-toList :: MonadIO m => TMap k v -> m [(k, v)]
-toList (TMap tvar) = M.toList `readVar` tvar
+toList :: MonadIO m => Map k v -> m [(k, v)]
+toList (Map tvar) = M.toList `readVar` tvar
 
-keys :: MonadIO m => TMap k v -> m [k]
-keys (TMap tvar) = M.keys `readVar` tvar
+keys :: MonadIO m => Map k v -> m [k]
+keys (Map tvar) = M.keys `readVar` tvar
 
-lookup :: (MonadIO m, Ord k) => k -> TMap k v -> m (Maybe v)
-lookup key (TMap tvar) = M.lookup key `readVar` tvar
+lookup :: (MonadIO m, Ord k) => k -> Map k v -> m (Maybe v)
+lookup key (Map tvar) = M.lookup key `readVar` tvar
 
-insert :: (MonadIO m, Ord k) => k -> v -> TMap k v -> m ()
-insert key val (TMap tvar) = atomic $ modifyTVar tvar (M.insert key val)
+insert :: (MonadIO m, Ord k) => k -> v -> Map k v -> m ()
+insert key val (Map tvar) = atomic $ modifyTVar tvar (M.insert key val)
 
-update :: (MonadIO m, Ord k) => k -> (Maybe v -> m v) -> TMap k v -> m ()
-update key f (TMap tvar) = do
+update :: (MonadIO m, Ord k) => k -> (Maybe v -> m v) -> Map k v -> m ()
+update key f (Map tvar) = do
     m <- atomic $ readTVar tvar
     v <- f $ M.lookup key m
     atomic $ writeTVar tvar $! M.insert key v m
 
-delete :: (MonadIO m, Ord k) => k -> TMap k v -> m (Maybe v)
-delete key (TMap tvar) = atomic $ do
+delete :: (MonadIO m, Ord k) => k -> Map k v -> m (Maybe v)
+delete key (Map tvar) = atomic $ do
     (v, m) <- M.updateLookupWithKey (\_ _ -> Nothing) key `liftM` readTVar tvar
     writeTVar tvar m
     return v
