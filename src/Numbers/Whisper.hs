@@ -35,9 +35,9 @@ import qualified Control.Concurrent.STM.Map as M
 import qualified Numbers.Whisper.Series     as S
 
 data Whisper = Whisper
-    { res   :: Resolution
-    , step  :: Step
-    , db    :: M.Map Key Series
+    { _res   :: Resolution
+    , _step  :: Step
+    , _db    :: M.Map Key Series
     }
 
 newWhisper :: Int -> Int -> IO Whisper
@@ -45,9 +45,9 @@ newWhisper res step = Whisper (res `div` step) step `liftM` M.empty
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Time -> Point -> Whisper -> IO ()
-insert ts (P k v) Whisper{..} = M.update k f db
+insert ts (P k v) Whisper{..} = M.update k f _db
   where
-    f = return . maybe (S.create res step ts v) (S.update ts v)
+    f = return . maybe (S.create _res _step ts v) (S.update ts v)
 
 json :: Time -> Time -> Whisper -> IO Builder
 json from to w =
@@ -61,4 +61,4 @@ text from to w = (build . map f) `liftM` fetch from to w
     f (Key k, s) = k &&> "," &&& s &&> "\n"
 
 fetch :: Time -> Time -> Whisper -> IO [(Key, Series)]
-fetch from to Whisper{..} = map (second (S.fetch from to)) `liftM` M.toList db
+fetch from to Whisper{..} = map (second (S.fetch from to)) `liftM` M.toList _db
