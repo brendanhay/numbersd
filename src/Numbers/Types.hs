@@ -37,7 +37,6 @@ import Blaze.ByteString.Builder
 import Control.Arrow                     ((***), first)
 import Control.Applicative        hiding (empty)
 import Control.Monad
-import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
 import Data.List                  hiding (sort)
 import Data.Maybe
@@ -127,6 +126,9 @@ data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
 
+decode :: Parser a -> BS.ByteString -> Maybe a
+decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
+
 instance Loggable Uri where
     build (Tcp h p) = "tcp://" <&& h &&& ":" <&& p
     build (Udp h p) = "udp://" <&& h &&& ":" <&& p
@@ -153,36 +155,51 @@ instance IsString Key where
 
 instance Monoid Key where
     (Key a) `mappend` (Key b) = Key $ BS.concat [a, ".", b]
-    mempty = Key ""
+    mempty = Key mempty
 
 instance Loggable Key where
     build (Key k) = build k
 
 instance Loggable [Key] where
-    build = mconcat . intersperse (sbuild ",") . map build
+    build = mconcat . intersperse s . map build
+      where
+        s = sbuild ","
 
 keyParser :: Parser Key
 keyParser = Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
   where
     strip s = foldl (flip $ uncurry replace) s unsafe
 
+unsafe :: [(Regex, BS.ByteString)]
+unsafe = map (first makeRegex . join (***) BS.pack) rs
+  where
+    rs = [ ("\\s+", "_")
+         , ("\\/", "-")
+         , ("[^a-zA-Z_\\-0-9\\.]", "")
+         ]
+
+replace :: Regex -> BS.ByteString -> BS.ByteString -> BS.ByteString
+replace regex rep = go
+  where
+    go s = case match regex s of
+        Just (a, _, c) -> a `BS.append` rep `BS.append` go c
+        _              -> s
+
+match :: Regex
+      -> BS.ByteString
+      -> Maybe (BS.ByteString, BS.ByteString, BS.ByteString)
+match = matchM
+
 data Metric = Counter Double
-            | Timer [Double]
+            | Timer (V.Vector Double)
             | Gauge Double
             | Set (S.Set Double)
               deriving (Eq, Ord, Show)
 
-instance ToJSON Metric where
-    toJSON m = case m of
-        (Counter v) -> toJSON v
-        (Timer  vs) -> toJSON vs
-        (Gauge   v) -> toJSON v
-        (Set    ss) -> toJSON $ S.toAscList ss
-
 instance Loggable Metric where
     build m = case m of
         (Counter v) -> "Counter " <&& v
-        (Timer  vs) -> "Timer "   <&& vs
+        (Timer  vs) -> "Timer "   <&& V.toList vs
         (Gauge   v) -> "Gauge "   <&& v
         (Set    ss) -> "Set "     <&& S.toAscList ss
 
@@ -197,21 +214,21 @@ metricParser = do
     r <- optional (PC.char '|' *> PC.char '@' *> PC.double)
     return . (k,) $
         case t of
-            'm' -> Timer [v]
+            'm' -> Timer $ V.singleton v
             'g' -> Gauge v
             's' -> Set $ S.singleton v
             _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- Div by zero
 
 zero :: Metric -> Bool
 zero (Counter 0) = True
-zero (Timer  []) = True
+zero (Timer  ns) = V.null ns
 zero (Gauge   0) = True
 zero (Set    ss) = S.null ss
 zero _           = False
 
 aggregate :: Metric -> Metric -> Metric
 aggregate (Counter x) (Counter y) = Counter $ x + y
-aggregate (Timer   x) (Timer   y) = Timer   $ x ++ y
+aggregate (Timer   x) (Timer   y) = Timer   $ x V.++ y
 aggregate (Set     x) (Set     y) = Set     $ x `S.union` y
 aggregate _           right       = right
 
@@ -239,7 +256,7 @@ calculate qs _ k (Timer vs) = concatMap (quantile k xs) qs <>
     , P ("timers" <> k <> "mean")  $ mean xs
     ]
   where
-    xs = sort $ V.fromList vs
+    xs = sort vs
 
 quantile :: Key -> V.Vector Double -> Int -> [Point]
 quantile k xs q =
@@ -248,27 +265,6 @@ quantile k xs q =
     , P ("timers" <> k <> a "sum_")   $ V.sum ys
     ]
   where
-    ys = V.take n xs
-    n  = round $ fromIntegral q / 100 * (fromIntegral $ V.length xs :: Double)
     a  = Key . (`BS.append` BS.pack (show q))
-
-decode :: Parser a -> BS.ByteString -> Maybe a
-decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
-
-unsafe :: [(Regex, BS.ByteString)]
-unsafe = map (first makeRegex . join (***) BS.pack) rs
-  where
-    rs = [ ("\\s+", "_")
-         , ("\\/", "-")
-         , ("[^a-zA-Z_\\-0-9\\.]", "")
-         ]
-
-replace :: Regex -> BS.ByteString -> BS.ByteString -> BS.ByteString
-replace regex rep = go
-  where
-    go s = case match regex s of
-        Just (a, _, c) -> a `BS.append` rep `BS.append` go c
-        _              -> s
-
-match :: Regex -> BS.ByteString -> Maybe (BS.ByteString, BS.ByteString, BS.ByteString)
-match = matchM
+    n  = round $ fromIntegral q / 100 * (fromIntegral $ V.length xs :: Double)
+    ys = V.take n xs
