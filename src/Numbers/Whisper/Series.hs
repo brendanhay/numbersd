@@ -86,7 +86,7 @@ instance ToJSON Series where
 
 create :: Resolution -> Step -> Time -> Double -> Series
 create r s ts val
-    | r > maxResolution = error $ "Resolution to high: " ++ show r
+    | r > maxResolution = error $ "Resolution too high: " ++ show r
     | otherwise         = SS r s (toInterval s ts) (singleton (r - 1) val)
 
 fetch :: Time -> Time -> Series -> Series
