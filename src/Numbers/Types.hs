@@ -65,8 +65,8 @@ class Loggable a where
     infixr 8 &&>
 
     a &&& b = build a <> build b
-    a <&& b  = build a &&& b
-    a &&> b  = a &&& build b
+    a <&& b = build a &&& b
+    a &&> b = a &&& build b
 
 sbuild :: String -> Builder
 sbuild = build . BS.pack
