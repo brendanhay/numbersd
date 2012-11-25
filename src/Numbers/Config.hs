@@ -26,12 +26,13 @@ import Data.Lens.Template
 import Data.List.Split                 (splitOn)
 import Data.Monoid                     (mempty, mconcat)
 import Data.Version                    (showVersion)
+import Numbers.Log
+import Numbers.Types
+import Numbers.Whisper.Series          (maxResolution)
 import Paths_numbersd                  (version)
 import System.Console.CmdArgs.Explicit
 import System.Environment
 import System.Exit
-import Numbers.Log
-import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 
@@ -102,6 +103,8 @@ validate Config{..} = do
     check (null _listeners)          "--listeners cannot be blank"
     check (1 > _interval)            "--interval must be greater than 0"
     check (_interval >= _resolution) "--resolution must be greater than --interval"
+    check (_resolution > maxResolution)
+              $ "--resolution must be less than " ++ show maxResolution
     check (null _percentiles)        "--percentiles cannot be blank"
     return ()
   where
