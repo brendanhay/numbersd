@@ -81,7 +81,7 @@ getType :: Request -> Maybe ContentType
 getType req = hAccept `lookup` requestHeaders req >>= f . parseHttpAccept
   where
     f h | p Json h  = return Json
-        | p Html h  = return Html
+        | p Html h  = return Text
         | p Text h  = return Text
         | otherwise = fail "Not Acceptable"
     p t = (pack t `elem`)
