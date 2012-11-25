@@ -20,10 +20,12 @@ import Control.Monad.IO.Class
 import Control.Concurrent.Async
 import Data.Aeson               hiding (json)
 import Data.Lens.Common                ((^=))
+import Data.Maybe
 import Data.Text.Encoding              (decodeUtf8)
 import Network.Wai
+import Network.Wai.Parse
 import Network.Wai.Handler.Warp
-import Network.HTTP.Types              (Status, status200, status404)
+import Network.HTTP.Types
 import Numbers.Log
 import Numbers.Types
 import Numbers.Sink.Internal
@@ -31,6 +33,8 @@ import Numbers.Sink.Internal
 import qualified Control.Concurrent.STM.Map as M
 import qualified Data.ByteString.Char8      as BS
 import qualified Numbers.Whisper            as W
+
+data ContentType = Json | Html | Text
 
 data State = State
     { _whis  :: W.Whisper
@@ -49,35 +53,58 @@ httpSink res step = fmap $ \port -> do
         &&> "/overview.json, and /numbersd.{json,whisper}"
 
     -- Start a thread for flush events
-    runSink $ flush ^= \ts p ->
-        -- TODO: Work on internal counters and overview
-        -- Store time series
-        W.insert ts p w
+    runSink $ flush ^= (\ts pnt -> W.insert ts pnt w)
 
 serve :: State -> Request -> IO Response
-serve State{..} req = case rawPathInfo req of
-    "/overview.json"    -> return $ overview []
-    "/numbersd.json"    -> series (W.json $ Time 0) jsonType
-    "/numbersd.whisper" -> series (W.text $ Time 0) whisperType
-    _                   -> unknown
+serve State{..} req | isNothing a = return unacceptable
+                    | otherwise   = f
   where
-    series f typ = do
-        t <- currentTime
-        response status200 typ `liftM` f t _whis
-    unknown = return . response status404 jsonType
-        $ copyByteString "{\"error\": \"Not Found\"}"
+    a = getType req
+    f = case pathInfo req of
+        ["numbersd"]      -> series b _whis
+        ["numbersd", key] -> series b _whis
+        ["overview"]      -> return $ overview b []
+        _                 -> return $ unknown b
+      where
+        b = fromJust a
 
-overview :: [(Key, Int)] -> Response
-overview = response status200 jsonType . body
+series :: ContentType -> W.Whisper -> IO Response
+series typ whis = do
+    ts <- currentTime
+    response typ status200 `liftM` f ts ts whis
+  where
+    f = case typ of
+        Json -> W.json
+        _    -> W.text
+
+getType :: Request -> Maybe ContentType
+getType req = hAccept `lookup` requestHeaders req >>= f . parseHttpAccept
+  where
+    f h | pack Json `elem` h = return Json
+        | pack Html `elem` h = return Html
+        | pack Text `elem` h = return Text
+        | otherwise          = fail "Not Acceptable"
+
+unacceptable :: Response
+unacceptable = response Text status406 $ copyByteString "Not Acceptable"
+
+unknown :: ContentType -> Response
+unknown typ = response typ status404 $ copyByteString msg
+  where
+    msg = case typ of
+        Json -> "{\"error\": \"Not Found\"}"
+        _    -> "Not Found"
+
+overview :: ContentType -> [(Key, Int)] -> Response
+overview typ = response typ status200 . body
   where
     body = copyLazyByteString . encode . object . map f
     f (Key k, v) = decodeUtf8 k .= v
 
-response :: Status -> BS.ByteString -> Builder -> Response
-response status typ = ResponseBuilder status [("Content-Type", typ)]
+response :: ContentType -> Status -> Builder -> Response
+response typ status = ResponseBuilder status [("Content-Type", pack typ)]
 
-jsonType :: BS.ByteString
-jsonType = "application/json"
-
-whisperType :: BS.ByteString
-whisperType = "text/plain"
+pack :: ContentType -> BS.ByteString
+pack Json = "application/json"
+pack Html = "text/html"
+pack Text = "text/plain"

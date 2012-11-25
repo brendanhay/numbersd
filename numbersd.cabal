@@ -52,6 +52,7 @@ executable numbersd
                     , transformers
                     , vector
                     , wai
+                    , wai-extra
                     , warp
 
 test-suite numbersd-properties
@@ -128,4 +129,5 @@ benchmark numbersd-benchmarks
                     , transformers
                     , vector
                     , wai
+                    , wai-extra
                     , warp
