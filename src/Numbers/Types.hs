@@ -55,10 +55,9 @@ import qualified Data.Vector           as V
 
 class Loggable a where
     build :: Loggable a => a -> Builder
-
     (&&&) :: (Loggable a, Loggable b) => a -> b -> Builder
-    (<&&)  :: Loggable a => String -> a -> Builder
-    (&&>)  :: Loggable a => a -> String -> Builder
+    (<&&) :: Loggable a => String -> a -> Builder
+    (&&>) :: Loggable a => a -> String -> Builder
 
     infixr 7 &&&
     infixr 9 <&&
