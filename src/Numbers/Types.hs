@@ -64,7 +64,7 @@ class Loggable a where
     infixr 9 <&&
     infixr 8 &&>
 
-    a &&& b = build a `mappend` build b
+    a &&& b = build a <> build b
     a <&& b  = build a &&& b
     a &&> b  = a &&& build b
 
