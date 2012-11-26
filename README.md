@@ -65,7 +65,7 @@ the following request paths will be responsed with an appropriate content type:
 * `/numbersd.json` JSON representation of the `.whisper` format above
 
 The `.whisper` response type is intended to be used from Nagios or other monitoring tools
-to connect directly to a `NumbersD` instance running alongside an applicaiton.
+to connect directly to a `NumbersD` instance running alongside an application.
 
 There are a number of `check_graphite` Nagios NPRE plugins available which should work identically
 to pointing directly at an instance of Graphite.
