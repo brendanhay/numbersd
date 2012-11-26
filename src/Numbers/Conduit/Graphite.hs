@@ -18,14 +18,9 @@ import Blaze.ByteString.Builder (toByteString)
 import Numbers.Conduit.Internal
 import Numbers.Types
 
-import qualified Data.ByteString.Char8 as BS
-
 graphiteSink :: String -> Uri -> IO EventSink
 graphiteSink pref uri = runSink $ awaitForever f =$ sinkSocket uri
   where
-    f (Flush ts p) = yield $ encode pref ts p
+    f (Flush ts p) = yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts
     f _            = return ()
-
-encode :: String -> Time -> Point -> BS.ByteString
-encode pref ts p = toByteString $ pref &&> "." &&& p &&> " " &&& ts
 
