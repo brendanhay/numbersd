@@ -21,6 +21,6 @@ import Numbers.Types
 graphiteSink :: String -> Uri -> IO EventSink
 graphiteSink pref uri = runSink $ awaitForever f =$ sinkSocket uri
   where
-    f (Flush ts p) = yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts
+    f (Flush ts p) = yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
     f _            = return ()
 
