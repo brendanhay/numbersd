@@ -26,7 +26,7 @@ logSink es = Just $ do
     infoL $ "Logging " <&& intercalate ", " es &&> " events"
     runSink $ awaitForever f =$ awaitForever (liftIO . infoL)
   where
-    f (Flush ts p) = yield $ p &&> " " &&& ts &&> "\n"
+    f (Flush ts p) = yield $ p &&> " " &&& ts
     f _            = return ()
 
 
