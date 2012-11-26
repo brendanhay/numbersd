@@ -18,9 +18,7 @@ import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad
 import Data.Maybe               (catMaybes)
-import Numbers.Conduit.Internal
-import Numbers.Conduit.Graphite
-import Numbers.Conduit.Log
+import Numbers.Conduit
 import Numbers.Config
 import Numbers.Log
 import Numbers.Store

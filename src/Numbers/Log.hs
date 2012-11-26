@@ -38,4 +38,3 @@ newLogger path = do
              "stderr" -> return stderr
              _        -> openFile path AppendMode
     logL `liftM` mkLogger True h
-

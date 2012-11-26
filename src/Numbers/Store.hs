@@ -22,7 +22,7 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Data.Conduit             hiding (Flush)
-import Numbers.Conduit.Internal
+import Numbers.Conduit
 import Numbers.Types
 
 import qualified Control.Concurrent.STM.Map as M
