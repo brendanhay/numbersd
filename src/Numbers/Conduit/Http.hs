@@ -47,8 +47,7 @@ httpSink res step = fmap $ \port -> do
 
     async (run port $ liftIO . serve (State w s)) >>= link
 
-    infoL $ "Serving http://0.0.0.0:" <&& port
-        &&> "/overview.json, and /numbersd.{json,whisper}"
+    infoL $ "Serving /overview and /numbersd/<key> on http://0.0.0.0:" <&& port
 
     runSink . awaitForever $ \e -> case e of
         Flush ts p -> liftIO $ W.insert ts p w
