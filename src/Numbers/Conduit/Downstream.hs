@@ -20,5 +20,6 @@ import Numbers.Types
 downstreamSink :: Uri -> IO EventSink
 downstreamSink uri = runSink $ awaitForever f =$ sinkSocket uri
   where
-    f (Flush ts p) = yield "ballsacks 1.0 123123123"
+    f (Parse k m)  = yield "timers and shit"
+    f (Flush ts p) = yield "counters only"
     f _            = return ()
