@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Sink.Downstream
+-- Module      : Numbers.Conduit.Downstream
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,15 +10,15 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink.Downstream (
+module Numbers.Conduit.Downstream (
       downstreamSink
     ) where
 
-import Data.Lens.Common
-import Numbers.Log
-import Numbers.Sink.Internal
+import Numbers.Conduit.Internal
 import Numbers.Types
 
-downstreamSink :: Uri -> IO Sink
-downstreamSink _ = runSink $
-    flush ^= \_ v -> infoL $ "Upstream: " <&& v
+downstreamSink :: Uri -> IO EventSink
+downstreamSink uri = runSink $ awaitForever f =$ sinkSocket uri
+  where
+    f (Flush ts p) = yield "ballsacks 1.0 123123123"
+    f _            = return ()

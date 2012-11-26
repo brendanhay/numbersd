@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Sink.Http
+-- Module      : Numbers.Conduit.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,7 +10,7 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink.Http (
+module Numbers.Conduit.Http (
       httpSink
     ) where
 
@@ -19,7 +19,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.Async
 import Data.Aeson               hiding (json)
-import Data.Lens.Common                ((^=))
 import Data.Maybe
 import Data.Text.Encoding              (decodeUtf8)
 import Network.Wai
@@ -28,7 +27,7 @@ import Network.Wai.Handler.Warp
 import Network.HTTP.Types
 import Numbers.Log
 import Numbers.Types
-import Numbers.Sink.Internal
+import Numbers.Conduit.Internal
 
 import qualified Control.Concurrent.STM.Map as M
 import qualified Data.ByteString.Char8      as BS
@@ -41,19 +40,19 @@ data State = State
     , _stats :: M.Map Key Int
     }
 
-httpSink :: Int -> Int -> Maybe Int -> Maybe (IO Sink)
+httpSink :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 httpSink res step = fmap $ \port -> do
     s <- M.empty
     w <- W.newWhisper res step
 
-    -- Start the HTTP server
     async (run port $ liftIO . serve (State w s)) >>= link
 
     infoL $ "Serving http://0.0.0.0:" <&& port
         &&> "/overview.json, and /numbersd.{json,whisper}"
 
-    -- Start a thread for flush events
-    runSink $ flush ^= (\ts pnt -> W.insert ts pnt w)
+    runSink . awaitForever $ \e -> case e of
+        Flush ts p -> liftIO $ W.insert ts p w
+        _          -> return ()
 
 serve :: State -> Request -> IO Response
 serve State{..} req | isNothing a = return unacceptable

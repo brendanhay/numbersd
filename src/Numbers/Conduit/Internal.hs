@@ -30,13 +30,9 @@ module Numbers.Conduit.Internal (
     , sinkQueue
 
     -- * Re-exports
-    , await
     , awaitForever
     , yield
     , (=$)
-    , ($=)
-    , (=$=)
-    , ($$)
     , S.withSocketsDo
     ) where
 

@@ -14,6 +14,9 @@ module Numbers.Conduit (
       module M
     ) where
 
-import Numbers.Conduit.Graphite as M
-import Numbers.Conduit.Log      as M
-import Numbers.Conduit.Internal as M
+import Numbers.Conduit.Broadcast  as M
+import Numbers.Conduit.Downstream as M
+import Numbers.Conduit.Graphite   as M
+import Numbers.Conduit.Http       as M
+import Numbers.Conduit.Log        as M
+import Numbers.Conduit.Internal   as M

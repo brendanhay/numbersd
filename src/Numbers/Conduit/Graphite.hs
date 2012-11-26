@@ -18,11 +18,7 @@ import Numbers.Conduit.Internal
 import Numbers.Types
 
 graphiteSink :: String -> Uri -> IO EventSink
-graphiteSink pref uri = runSink $ event =$ sinkSocket uri
+graphiteSink pref uri = runSink $ awaitForever f =$ sinkSocket uri
   where
-    event = do
-        e <- await
-        case e of
-            Just (Flush ts p) -> yield "ballsacks 1.0 123123123"
-            Nothing           -> return ()
-            _                 -> event
+    f (Flush ts p) = yield "ballsacks 1.0 123123123"
+    f _            = return ()
