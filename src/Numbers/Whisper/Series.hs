@@ -78,10 +78,10 @@ instance ToJSON Interval where
 
 instance ToJSON Series where
     toJSON s@SS{..} = object
-        [ pack "start"  .= start s
-        , pack "end"    .= end
-        , pack "step"   .= step
-        , pack "values" .= values s
+        [ "start"  .= start s
+        , "end"    .= end
+        , "step"   .= step
+        , "values" .= values s
         ]
 
 create :: Resolution -> Step -> Time -> Double -> Series

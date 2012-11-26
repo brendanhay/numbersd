@@ -26,6 +26,7 @@ module Numbers.Types (
 
     -- * Functions
     , currentTime
+    , whenTcp
     , zero
     , aggregate
     , calculate
@@ -121,6 +122,10 @@ currentTime = (Time . truncate) `liftM` getPOSIXTime
 
 data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
          | Udp { _host :: BS.ByteString, _port :: Int }
+
+whenTcp :: Uri -> Bool
+whenTcp (Tcp _ _) = True
+whenTcp _         = False
 
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")

@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Sink.Broadcast
+-- Module      : Numbers.Conduit.Graphite
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,19 +10,19 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Sink.Broadcast (
-      broadcastSink
+module Numbers.Conduit.Graphite (
+      graphiteSink
     ) where
 
-import Data.Lens.Common
-import Numbers.Log
-import Numbers.Sink.Internal
-import Numbers.Socket
+import Numbers.Conduit.Internal
 import Numbers.Types
 
-broadcastSink :: Uri -> IO Sink
-broadcastSink uri = do
-    sock <- connect uri
-    runSink $ receive ^= \b -> do
-        infoL $ "Broadcast: " <&& b &&> " to " &&& uri
-        send sock b
+graphiteSink :: String -> Uri -> IO EventSink
+graphiteSink pref uri = runSink $ event =$ sinkSocket uri
+  where
+    event = do
+        e <- await
+        case e of
+            Just (Flush ts p) -> yield "ballsacks 1.0 123123123"
+            Nothing           -> return ()
+            _                 -> event

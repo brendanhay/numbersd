@@ -37,93 +37,20 @@ executable numbersd
                     , blaze-builder
                     , bytestring
                     , cmdargs
+                    , conduit
                     , containers
                     , data-lens
                     , data-lens-template
                     , fast-logger
                     , http-types
+                    , monad-control
                     , network
+                    , network-conduit
                     , regex-pcre
                     , split
                     , statistics
                     , stm
-                    , text
-                    , time
-                    , transformers
-                    , vector
-                    , wai
-                    , wai-extra
-                    , warp
-
-test-suite numbersd-properties
-  type:               exitcode-stdio-1.0
-  main-is:            Properties.hs
-  hs-source-dirs:     src, test
-  default-language:   Haskell2010
-  default-extensions: FlexibleInstances
-                    , RecordWildCards
-                    , TypeSynonymInstances
-                    , GeneralizedNewtypeDeriving
-  ghc-options:       -main-is Properties -Wall -threaded
-
-  build-depends:      base >= 4.5.1.0
-                    , aeson
-                    , async
-                    , attoparsec
-                    , blaze-builder
-                    , bytestring
-                    , cmdargs
-                    , containers
-                    , data-lens
-                    , data-lens-template
-                    , fast-logger
-                    , http-types
-                    , network
-                    , regex-pcre
-                    , split
-                    , statistics
-                    , stm
-                    , text
-                    , time
-                    , transformers
-                    , vector
-                    , wai
-                    , warp
-                    , test-framework
-                    , test-framework-quickcheck2
-                    , test-framework-hunit
-                    , HUnit
-                    , QuickCheck
-
-benchmark numbersd-benchmarks
-  type:               exitcode-stdio-1.0
-  main-is:            Benchmarks.hs
-  hs-source-dirs:     src, test
-  default-language:   Haskell2010
-  default-extensions: FlexibleInstances
-                    , RecordWildCards
-                    , TypeSynonymInstances
-                    , GeneralizedNewtypeDeriving
-  ghc-options:       -main-is Benchmarks -Wall -threaded
-
-  build-depends:      base >= 4.5.1.0
-                    , aeson
-                    , async
-                    , attoparsec
-                    , blaze-builder
-                    , bytestring
-                    , cmdargs
-                    , containers
-                    , criterion
-                    , data-lens
-                    , data-lens-template
-                    , fast-logger
-                    , http-types
-                    , network
-                    , regex-pcre
-                    , split
-                    , statistics
-                    , stm
+                    , stm-conduit
                     , text
                     , time
                     , transformers

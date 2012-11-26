@@ -14,69 +14,43 @@
 
 module Main where
 
-import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad
 import Data.Maybe               (catMaybes)
+import Numbers.Conduit.Internal
+import Numbers.Conduit.Graphite
+import Numbers.Conduit.Log
 import Numbers.Config
 import Numbers.Log
-import Numbers.Sink
-import Numbers.Socket
 import Numbers.Store
-import Numbers.Types
-
-import qualified Data.ByteString.Char8 as BS
 
 main :: IO ()
 main = withSocketsDo $ do
     Config{..} <- parseConfig
 
-    sinks <- sequence $
-        catMaybes [ logSink _logEvents
-                  , httpSink _resolution _interval _httpPort
-                  ]
-            ++ map (graphiteSink _prefix) _graphites
-            ++ map broadcastSink _broadcasts
-            ++ map downstreamSink _downstreams
-
-    infoL "Sinks started..."
-
-    store <- newStore _percentiles _interval sinks
-    buf   <- atomically newTQueue
-
+    buf <- atomically $ newTBQueue 4096
     infoL "Buffering..."
 
-    tids  <- mapM asyncLink $ reader buf store:map (listener buf) _listeners
-
+    ls  <- mapM (asyncLink . (`sourceSocket` buf)) _listeners
     infoL "Listeners started..."
+
+    ss  <- sequence $
+        catMaybes [ logSink _logEvents
+                  -- , httpSink _resolution _interval _httpPort
+                  ]
+            ++ map (graphiteSink _prefix) _graphites
+            -- ++ map broadcastSink _broadcasts
+            -- ++ map downstreamSink _downstreams
+    infoL "Handlers started..."
+
+    sto <- asyncLink $ runStore _percentiles _interval ss buf
+    infoL "Store started..."
 
     -- Communication between the main thread and other forkIO'd
     -- threads is much much slower than between two forkIO'd threads
     -- Just waiting in the main thread
-    void $ waitAnyCancel tids
-
-reader :: TQueue BS.ByteString -> Store -> IO ()
-reader buf store = forever $ do
-    bstr <- atomically $ readTQueue buf
-    parse bstr store
-
-listener :: TQueue BS.ByteString -> Uri -> IO ()
-listener buf uri
-    | tcp uri   = f tcpListener
-    | otherwise = f udpListener
-  where
-    f g = listen uri >>= forever . g buf
-
-tcpListener :: TQueue BS.ByteString -> Socket -> IO ()
-tcpListener buf sock = do
-    s <- accept sock
-    void . forkIO . forever $ do
-        b <- recv s
-        atomically $ writeTQueue buf b
-
-udpListener :: TQueue BS.ByteString -> Socket -> IO ()
-udpListener buf sock = recv sock >>= atomically . writeTQueue buf
+    void . waitAnyCancel $ sto:ls
 
 asyncLink :: IO a -> IO (Async a)
 asyncLink io = do

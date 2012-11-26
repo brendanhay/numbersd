@@ -13,16 +13,16 @@
 module Numbers.Store (
     -- * Opaque
       Store
-    , newStore
-
-    -- * Functions
-    , parse
+    , runStore
     ) where
 
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Concurrent.Async
-import Numbers.Sink
+import Control.Concurrent.STM
+import Data.Conduit             hiding (Flush)
+import Numbers.Conduit.Internal
 import Numbers.Types
 
 import qualified Control.Concurrent.STM.Map as M
@@ -31,21 +31,29 @@ import qualified Data.ByteString.Char8      as BS
 data Store = Store
     { _percentiles :: [Int]
     , _interval    :: Int
-    , _sinks       :: [Sink]
+    , _sinks       :: [EventSink]
     , _tmap        :: M.Map Key Metric
     }
 
-newStore :: [Int] -> Int -> [Sink] -> IO Store
+runStore :: [Int] -> Int -> [EventSink] -> TBQueue BS.ByteString -> IO ()
+runStore qs n hs q = runResourceT $ sourceQueue q $$ sink
+  where
+    sink = bracketP
+        (liftIO $ newStore qs n hs)
+        (\_ -> return ())
+        (\s -> awaitForever $ liftIO . flip insert s)
+
+newStore :: [Int] -> Int -> [EventSink] -> IO Store
 newStore qs n sinks = Store qs n sinks `fmap` M.empty
 
-parse :: BS.ByteString -> Store -> IO ()
-parse bstr s@Store{..} = do
-    emit _sinks $ Receive bstr
+insert :: BS.ByteString -> Store -> IO ()
+insert bstr s@Store{..} = do
+    pushEvent _sinks $ Receive bstr
     forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
     f b = case decode metricParser b of
         Just (k, v) -> bucket k v s
-        Nothing     -> emit _sinks $ Invalid bstr
+        Nothing     -> pushEvent _sinks $ Invalid bstr
 
 bucket :: Key -> Metric -> Store -> IO ()
 bucket key val s@Store{..} = M.update key f _tmap
@@ -61,5 +69,5 @@ flush key Store{..} = async $ do
     f Nothing  = return ()
     f (Just v) = do
         ts <- currentTime
-        mapM_ (emit _sinks . Flush ts)
+        mapM_ (pushEvent _sinks . Flush ts)
             $ calculate _percentiles _interval key v
