@@ -35,7 +35,6 @@ module Numbers.Whisper.Series (
 
 import Data.Aeson
 import Data.List     (intersperse)
-import Data.Text     (pack)
 import Numbers.Types
 
 type Resolution = Int

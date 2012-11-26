@@ -11,11 +11,9 @@
 --
 
 module Numbers.Conduit (
-      module Numbers.Conduit.Graphite
-    , module Numbers.Conduit.Log
-    , module Numbers.Conduit.Internal
+      module M
     ) where
 
-import Numbers.Conduit.Graphite
-import Numbers.Conduit.Log
-import Numbers.Conduit.Internal
+import Numbers.Conduit.Graphite as M
+import Numbers.Conduit.Log      as M
+import Numbers.Conduit.Internal as M
