@@ -15,10 +15,13 @@ module Numbers.Conduit.Downstream (
     ) where
 
 import Numbers.Conduit.Internal
+import Numbers.Log
 import Numbers.Types
 
 downstreamSink :: Uri -> IO EventSink
-downstreamSink uri = runSink $ awaitForever f =$ sinkSocket uri
+downstreamSink uri = do
+    infoL $ "Connected to downstream " <&& uri
+    runSink $ awaitForever f =$ sinkSocket uri
   where
     f (Parse k m)  = yield "timers and shit"
     f (Flush ts p) = yield "counters only"

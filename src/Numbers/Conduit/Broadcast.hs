@@ -15,10 +15,13 @@ module Numbers.Conduit.Broadcast (
     ) where
 
 import Numbers.Conduit.Internal
+import Numbers.Log
 import Numbers.Types
 
 broadcastSink :: Uri -> IO EventSink
-broadcastSink uri = runSink $ awaitForever f =$ sinkSocket uri
+broadcastSink uri = do
+    infoL $ "Connected to broadcast " <&& uri
+    runSink $ awaitForever f =$ sinkSocket uri
   where
     f (Receive bs) = yield bs
     f _            = return ()

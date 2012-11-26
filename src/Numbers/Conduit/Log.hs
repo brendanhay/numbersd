@@ -16,14 +16,14 @@ module Numbers.Conduit.Log (
 
 import Control.Monad.IO.Class (liftIO)
 import Data.List              (intercalate)
-import Numbers.Log
 import Numbers.Conduit.Internal
+import Numbers.Log
 import Numbers.Types
 
 logSink :: [String] -> Maybe (IO EventSink)
 logSink [] = Nothing
 logSink es = Just $ do
-    infoL $ "Logging " <&& intercalate ", " es &&> " events"
+    infoL $ "Logging '" <&& intercalate ", " es &&> "' events"
     runSink $ awaitForever f =$ awaitForever (liftIO . infoL)
   where
     f (Flush ts p) = yield $ p &&> " " &&& ts
