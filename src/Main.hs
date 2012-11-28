@@ -40,7 +40,7 @@ main = withSocketsDo $ do
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
-    infoL "Handlers started..."
+    infoL "Sinks started..."
 
     sto <- asyncLink $ runStore _percentiles _interval ss buf
     infoL "Store started..."
