@@ -230,11 +230,14 @@ zero (Gauge   0) = True
 zero (Set    ss) = S.null ss
 zero _           = False
 
-aggregate :: Metric -> Metric -> Metric
-aggregate (Counter x) (Counter y) = Counter $ x + y
-aggregate (Timer   x) (Timer   y) = Timer   $ x V.++ y
-aggregate (Set     x) (Set     y) = Set     $ x `S.union` y
-aggregate _           right       = right
+aggregate :: Metric -> Maybe Metric -> Metric
+aggregate a Nothing  = a
+aggregate a (Just b) = b `f` a
+  where
+    f (Counter x) (Counter y) = Counter $ x + y
+    f (Timer   x) (Timer   y) = Timer   $ x V.++ y
+    f (Set     x) (Set     y) = Set     $ x `S.union` y
+    f _           right       = right
 
 data Point = P Key Double
     deriving (Show)

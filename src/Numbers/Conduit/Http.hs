@@ -29,9 +29,9 @@ import Numbers.Log
 import Numbers.Types
 import Numbers.Conduit.Internal
 
-import qualified Control.Concurrent.STM.Map as M
-import qualified Data.ByteString.Char8      as BS
-import qualified Numbers.Whisper            as W
+import qualified Data.ByteString.Char8 as BS
+import qualified Numbers.Map           as M
+import qualified Numbers.Whisper       as W
 
 data ContentType = Json | Html | Text
 
@@ -42,7 +42,7 @@ data State = State
 
 httpSink :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 httpSink res step = fmap $ \port -> do
-    s <- M.empty
+    s <- M.empty M.Permanent
     w <- W.newWhisper res step
 
     async (run port $ liftIO . serve (State w s)) >>= link
