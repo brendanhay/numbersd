@@ -28,20 +28,26 @@ import Control.Arrow                   (second)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
-import Control.Concurrent.Async
+import Control.Concurrent.Async hiding (wait)
 import Control.Concurrent.STM
-import Data.Traversable                (traverse)
 import Numbers.Types            hiding (P)
 
 import qualified Data.Map as M
 
-data Entry v = T { _expire :: Time, _value :: v } | P { _value :: v }
+data Entry v =
+    Transient
+    { _expire :: Time
+    , _value  :: v
+    }
+  | Permanent
+    { _value  :: v
+    }
 
 type Handler k v = k -> v -> Time -> IO ()
 
 data Policy k v = Reset Int (Handler k v)
                 | Continue Int (Handler k v)
-                | Permanent
+                | NoPolicy
 
 type TMap k v = TVar (M.Map k (Entry v))
 
@@ -66,48 +72,47 @@ lookup key Map{..} = do
 
 update :: (MonadIO m, Ord k) => k -> (Maybe v -> m v) -> Map k v -> m ()
 update key f tm@Map{..} = do
-    m  <- atomic $ readTVar _tmap
-    let e = M.lookup key m
+    e  <- M.lookup key `atomicRead` _tmap
     v  <- f $ _value `fmap` e
-    case e of
-        Just x  -> atomic . writeTVar _tmap $! M.insert key (x { _value = v }) m
-        Nothing -> insert key v tm
+    maybe (insert key v tm) (existing key v tm) e
 
 insert :: (MonadIO m, Ord k) => k -> v -> Map k v -> m ()
 insert key val Map{..} = do
-    e <- entry _policy key val _tmap
-    atomic $ modifyTVar _tmap (M.insert key e)
-
-entry :: (MonadIO m, Ord k) => Policy k v -> k -> v -> TMap k v -> m (Entry v)
-entry p key val tmap = case p of
-    Reset n h    -> f n h
-    Continue n h -> f n h
-    Permanent    -> return $ P val
+    e <- case _policy of
+        Reset n f    -> g f n
+        Continue n f -> g f n
+        NoPolicy     -> return $ Permanent val
+    atomic $ modifyTVar' _tmap (M.insert key e)
   where
-    f n h = do
-        ts <- liftIO $ (+ fromIntegral n) `liftM` currentTime
-        sweep key h (n * 1000000) tmap
-        return $ T ts val
+    g = sweep key val _tmap
 
-sweep :: (MonadIO m, Ord k) => k -> Handler k v -> Int -> TMap k v -> m ()
-sweep key f n tmap = liftIO $ async (delay n) >>= link
+existing :: (MonadIO m, Ord k) => k -> v -> Map k v -> Entry v -> m ()
+existing key val Map{..} e =
+    atomic $ modifyTVar' _tmap (M.insert key $ e { _value = val })
+
+sweep :: (MonadIO m, Ord k) => k -> v -> TMap k v -> Handler k v -> Int -> m (Entry v)
+sweep key val tmap f n = do
+    liftIO $ async (wait n) >>= link
+    ts <- liftIO $ (+ fromIntegral n) `liftM` currentTime
+    return $ Transient ts val
   where
-    delay x = do
-        liftIO $ threadDelay x
-        e <- M.lookup key `atomicRead` tmap
-        void $ traverse evict e
-    evict (T t v) = do
-        ts <- liftIO currentTime
-        let y = fromIntegral $ ts - t
-        if y <= 0
-         then delete key tmap >> f key v ts
-         else delay y
-    evict _ =  return ()
+    wait d = do
+        ts <- liftIO $ threadDelay d >> currentTime
+        v  <- M.lookup key `atomicRead` tmap
+        maybe (delete key tmap >> f key val ts) wait (delay v ts)
 
 delete :: (MonadIO m, Ord k) => k -> TMap k v -> m ()
 delete key tmap = atomic $! do
     m <- M.delete key `liftM` readTVar tmap
     writeTVar tmap m
+
+delay :: Maybe (Entry v) -> Time -> Maybe Int
+delay (Just (Transient t _)) ts
+    | d > 0     = Just d
+    | otherwise = Nothing
+  where
+    d = fromIntegral $ ts - t
+delay _ _ = Nothing
 
 atomicRead :: MonadIO m => (a -> b) -> TVar a -> m b
 atomicRead f tvar = f `liftM` atomic (readTVar tvar)

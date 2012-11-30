@@ -32,16 +32,12 @@ data Store = Store
     }
 
 runStore :: [Int] -> Int -> [EventSink] -> TBQueue BS.ByteString -> IO ()
-runStore qs n hs q = runResourceT $ sourceQueue q $$ sink
+runStore qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
+    (Store sinks `fmap` M.empty (M.Continue n f))
+    (\_ -> return ())
+    (\s -> awaitForever $ liftIO . flip insert s)
   where
-    sink = bracketP (liftIO $ newStore qs n hs) (\_ -> return ())
-        (\s -> awaitForever $ liftIO . flip insert s)
-
-newStore :: [Int] -> Int -> [EventSink] -> IO Store
-newStore qs n sinks = Store sinks `fmap` M.empty policy
-  where
-    policy     = M.Continue n f
-    f key m ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n key m
+    f k m ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k m
 
 insert :: BS.ByteString -> Store -> IO ()
 insert bstr Store{..} = do

@@ -42,7 +42,7 @@ data State = State
 
 httpSink :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 httpSink res step = fmap $ \port -> do
-    s <- M.empty M.Permanent
+    s <- M.empty M.NoPolicy
     w <- W.newWhisper res step
 
     async (run port $ liftIO . serve (State w s)) >>= link
