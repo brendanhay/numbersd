@@ -45,9 +45,6 @@ main = withSocketsDo $ do
     sto <- asyncLink $ runStore _percentiles _interval ss buf
     infoL "Store started..."
 
-    -- Communication between the main thread and other forkIO'd
-    -- threads is much much slower than between two forkIO'd threads
-    -- Just waiting in the main thread
     void . waitAnyCancel $ sto:ls
 
 asyncLink :: IO a -> IO (Async a)

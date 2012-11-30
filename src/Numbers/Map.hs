@@ -97,7 +97,7 @@ sweep key val tmap f n = do
     return $ Transient ts val
   where
     wait d = do
-        ts <- liftIO $ threadDelay d >> currentTime
+        ts <- liftIO $ threadDelay (d * 1000000) >> currentTime
         v  <- M.lookup key `atomicRead` tmap
         maybe (delete key tmap >> f key val ts) wait (delay v ts)
 
