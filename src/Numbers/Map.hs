@@ -82,13 +82,13 @@ insert key val Map{..} = do
         Reset n f    -> g f n
         Continue n f -> g f n
         NoPolicy     -> return $ Permanent val
-    atomic $ modifyTVar' _tmap (M.insert key e)
+    atomic $! modifyTVar' _tmap (M.insert key e)
   where
     g = sweep key val _tmap
 
 existing :: (MonadIO m, Ord k) => k -> v -> Map k v -> Entry v -> m ()
 existing key val Map{..} e =
-    atomic $ modifyTVar' _tmap (M.insert key $ e { _value = val })
+    atomic $ modifyTVar' _tmap (M.insert key $! e { _value = val })
 
 sweep :: (MonadIO m, Ord k) => k -> v -> TMap k v -> Handler k v -> Int -> m (Entry v)
 sweep key val tmap f n = do
