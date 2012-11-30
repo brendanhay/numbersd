@@ -83,7 +83,7 @@ insert key val Map{..} = do
     e <- case _policy of
         Reset n f    -> g f n
         Continue n f -> g f n
-        NoPolicy     -> return $! Permanent val
+        NoPolicy     -> return $ Permanent val
     atomic $! modifyTVar' _tmap (M.insert key e)
   where
     g = sweep key val _tmap

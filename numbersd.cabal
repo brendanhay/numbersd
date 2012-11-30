@@ -29,7 +29,7 @@ executable numbersd
                     , TypeSynonymInstances
   ghc-options:       -Wall -O2 -rtsopts -threaded
   ghc-prof-options:  -Wall -O2 -prof -fprof-auto -auto-all
-                     -with-rtsopts=-p
+                     -with-rtsopts=-hC
 --                     -with-rtsopts=-s
 
   build-depends:      base >= 4.5.1.0

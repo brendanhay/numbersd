@@ -47,9 +47,8 @@ newWhisper res step = do
 -- ^ Investigate implications of div absolute rounding torwards zero
 
 insert :: Time -> Point -> Whisper -> IO ()
-insert ts (P k v) Whisper{..} = M.update k f _db
-  where
-    f = return . maybe (S.create _res _step ts v) (S.update ts v)
+insert ts (P k v) Whisper{..} =
+    M.update k (return . maybe (S.create _res _step ts v) (S.update ts v)) _db
 
 json :: Time -> Time -> Whisper -> IO Builder
 json from to w =
