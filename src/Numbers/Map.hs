@@ -83,20 +83,20 @@ insert key val Map{..} = do
     e <- case _policy of
         Reset n f    -> g f n
         Continue n f -> g f n
-        NoPolicy     -> return $ Permanent val
+        NoPolicy     -> return $! Permanent val
     atomic $! modifyTVar' _tmap (M.insert key e)
   where
     g = sweep key val _tmap
 
 existing :: (MonadIO m, Ord k) => k -> v -> Map k v -> Entry v -> m ()
 existing key val Map{..} e =
-    atomic $ modifyTVar' _tmap (M.insert key $! e { _value = val })
+    atomic $! modifyTVar' _tmap (M.insert key $! e { _value = val })
 
 sweep :: (MonadIO m, Ord k) => k -> v -> TMap k v -> Handler k v -> Int -> m (Entry v)
 sweep key val tmap f n = do
     liftIO $ async (wait n) >>= link
     ts <- liftIO $ (+ fromIntegral n) `liftM` currentTime
-    return $ Transient ts val
+    return $! Transient ts val
   where
     wait d = do
         ts <- liftIO $ threadDelay (d * 1000000) >> currentTime
@@ -104,9 +104,7 @@ sweep key val tmap f n = do
         maybe (delete key tmap >> f key val ts) wait (delay v ts)
 
 delete :: (MonadIO m, Ord k) => k -> TMap k v -> m ()
-delete key tmap = atomic $! do
-    m <- M.delete key `liftM` readTVar tmap
-    writeTVar tmap m
+delete key tmap = atomic $! modifyTVar' tmap (M.delete key)
 
 delay :: Maybe (Entry v) -> Time -> Maybe Int
 delay (Just (Transient t _)) ts
