@@ -11,9 +11,11 @@
 --
 
 module Numbers.Map (
+    -- * Exported Types
+      Policy(..)
+
     -- * Opaque
-      Map
-    , Policy(..)
+    , Map
     , empty
 
     -- * Functions
