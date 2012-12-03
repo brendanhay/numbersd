@@ -28,5 +28,5 @@ statusSink store = runSink $ awaitForever f =$ sinkCounters store
     f (Parse  _ _) = yield "last_msg_seen"
     f _            = return ()
 
-sinkCounters :: MonadIO m => Store -> Sink Metric m ()
+sinkCounters :: MonadIO m => Store -> Sink Key m ()
 sinkCounters store = awaitForever (\k -> liftIO $ insert k (Counter 1) store)
