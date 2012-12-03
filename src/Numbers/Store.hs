@@ -11,9 +11,7 @@
 --
 
 module Numbers.Store (
-    -- * Opaque
-      Store
-    , storeSink
+      storeSink
     ) where
 
 import Control.Monad
@@ -26,39 +24,31 @@ import Numbers.Types
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.Map           as M
 
-data Store = Store
-    { _sinks :: [EventSink]
-    , _tmap  :: M.Map Key Metric
-    }
-
 storeSink :: [Int]
           -> Int
           -> [EventSink]
           -> TBQueue BS.ByteString
           -> IO ()
 storeSink qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
-    (liftIO $ newStore qs n sinks)
+    (liftIO . M.empty $ M.Continue n f)
     (\_ -> return ())
-    (\s -> awaitForever $ liftIO . flip parse s)
-
-newStore :: [Int] -> Int -> [EventSink] -> IO Store
-newStore qs n sinks = Store sinks `fmap` M.empty (M.Continue n f)
+    (\m -> awaitForever $ liftIO . parse sinks m)
   where
-    f k m ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k m
+    f k v ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k v
 
-parse :: BS.ByteString -> Store -> IO ()
-parse bstr Store{..} = do
-    pushEvent _sinks $ Receive bstr
-    measure "packets_received" _tmap
+parse :: [EventSink] -> M.Map Key Metric -> BS.ByteString -> IO ()
+parse sinks m bstr = do
+    pushEvent sinks $ Receive bstr
+    measure "packets_received" m
     forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
     f b = case decode metricParser b of
         Just (k, v) -> do
-            measure "num_stats" _tmap
-            insert k v _tmap
+            measure "num_stats" m
+            insert k v m
         Nothing     -> do
-            measure "bad_lines_seen" _tmap
-            pushEvent _sinks $ Invalid bstr
+            measure "bad_lines_seen" m
+            pushEvent sinks $ Invalid bstr
 
 measure :: Key -> M.Map Key Metric -> IO ()
 measure = flip insert (Counter 1)
