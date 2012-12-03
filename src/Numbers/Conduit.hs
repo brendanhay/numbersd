@@ -20,4 +20,3 @@ import Numbers.Conduit.Graphite   as M
 import Numbers.Conduit.Http       as M
 import Numbers.Conduit.Internal   as M
 import Numbers.Conduit.Log        as M
-import Numbers.Conduit.Status     as M
