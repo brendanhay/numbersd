@@ -40,12 +40,15 @@ main = withSocketsDo $ do
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
+
+    sto <- newStore _percentiles _interval ss
+    _   <- statusSink sto
     infoL "Sinks started..."
 
-    sto <- asyncLink $ runStore _percentiles _interval ss buf
+    a   <- asyncLink $ storeSink buf sto
     infoL "Store started..."
 
-    void . waitAnyCancel $ sto:ls
+    void . waitAnyCancel $ a:ls
 
 asyncLink :: IO a -> IO (Async a)
 asyncLink io = do

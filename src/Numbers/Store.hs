@@ -13,14 +13,16 @@
 module Numbers.Store (
     -- * Opaque
       Store
-    , runStore
+    , newStore
+    , storeSink
+    , insert
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.STM
 import Data.Conduit             hiding (Flush)
-import Numbers.Conduit
+import Numbers.Conduit.Internal
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
@@ -31,19 +33,23 @@ data Store = Store
     , _tmap  :: M.Map Key Metric
     }
 
-runStore :: [Int] -> Int -> [EventSink] -> TBQueue BS.ByteString -> IO ()
-runStore qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
-    (Store sinks `fmap` M.empty (M.Continue n f))
-    (\_ -> return ())
-    (\s -> awaitForever $ liftIO . flip insert s)
+newStore :: [Int] -> Int -> [EventSink] -> IO Store
+newStore qs n sinks = Store sinks `fmap` M.empty (M.Continue n f)
   where
     f k m ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k m
 
-insert :: BS.ByteString -> Store -> IO ()
-insert bstr Store{..} = do
+storeSink :: TBQueue BS.ByteString -> Store -> IO ()
+storeSink q store = runResourceT $ sourceQueue q $$
+    (awaitForever $ liftIO . flip parse store)
+
+insert :: Key -> Metric -> Store -> IO ()
+insert key val Store{..} = M.update key (return . aggregate val) _tmap
+
+parse :: BS.ByteString -> Store -> IO ()
+parse bstr s@Store{..} = do
     pushEvent _sinks $ Receive bstr
     forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
     f b = case decode metricParser b of
-        Just (k, v) -> M.update k (return . aggregate v) _tmap
+        Just (k, v) -> insert k v s
         Nothing     -> pushEvent _sinks $ Invalid bstr

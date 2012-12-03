@@ -30,22 +30,15 @@ import Numbers.Types
 import Numbers.Conduit.Internal
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Numbers.Map           as M
 import qualified Numbers.Whisper       as W
 
 data ContentType = Json | Html | Text
 
-data State = State
-    { _whis  :: W.Whisper
-    , _stats :: M.Map Key Int
-    }
-
 httpSink :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 httpSink res step = fmap $ \port -> do
-    s <- M.empty M.NoPolicy
     w <- W.newWhisper res step
 
-    async (run port $ liftIO . serve (State w s)) >>= link
+    async (run port $ liftIO . serve w) >>= link
 
     infoL $ "Serving /overview and /numbersd/<key> on http://0.0.0.0:" <&& port
 
@@ -53,18 +46,17 @@ httpSink res step = fmap $ \port -> do
         Flush ts p -> liftIO $ W.insert ts p w
         _          -> return ()
 
-serve :: State -> Request -> IO Response
-serve State{..} req | isNothing a = return unacceptable
-                    | otherwise   = f
-  where
-    a = getType req
-    f = case pathInfo req of
-        ["numbersd"]      -> series b _whis
-        ["numbersd", key] -> series b _whis
+serve :: W.Whisper -> Request -> IO Response
+serve whis req
+    | isNothing a = return unacceptable
+    | otherwise   = case pathInfo req of
+        ["numbersd"]      -> series b whis
+        ["numbersd", key] -> series b whis
         ["overview"]      -> return $ overview b []
         _                 -> return $ unknown b
-      where
-        b = fromJust a
+  where
+    a = getType req
+    b = fromJust a
 
 series :: ContentType -> W.Whisper -> IO Response
 series typ whis = do

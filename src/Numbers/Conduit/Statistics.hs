@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Conduit
+-- Module      : Numbers.Conduit.Statistics
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,14 +10,18 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Conduit (
-      module M
+module Numbers.Conduit.Statistics (
+      statsSink
     ) where
 
-import Numbers.Conduit.Broadcast  as M
-import Numbers.Conduit.Downstream as M
-import Numbers.Conduit.Graphite   as M
-import Numbers.Conduit.Http       as M
-import Numbers.Conduit.Internal   as M
-import Numbers.Conduit.Log        as M
-import Numbers.Conduit.Status     as M
+import Numbers.Conduit.Internal
+import Numbers.Log
+import Numbers.Types
+
+broadcastSink :: Uri -> IO EventSink
+broadcastSink uri = do
+    infoL $ "Connected to broadcast " <&& uri
+    runSink $ awaitForever f =$ sinkSocket uri
+  where
+    f (Receive bs) = yield bs
+    f _            = return ()
