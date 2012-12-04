@@ -21,7 +21,7 @@ import Numbers.Types
 broadcastSink :: Uri -> IO EventSink
 broadcastSink uri = do
     infoL $ "Connected to broadcast " <&& uri
-    runSink $ awaitForever f =$ sinkSocket uri
+    runSink $ awaitForever f =$ sinkUri uri
   where
     f (Receive bs) = yield bs
     f _            = return ()

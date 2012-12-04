@@ -22,11 +22,11 @@ module Numbers.Conduit.Internal (
     , pushEvent
 
     -- * Sources
-    , sourceSocket
+    , sourceUri
     , sourceQueue
 
     -- * Sinks
-    , sinkSocket
+    , sinkUri
     , sinkQueue
 
     -- * Re-exports
@@ -37,22 +37,24 @@ module Numbers.Conduit.Internal (
     ) where
 
 import Control.Concurrent.Async
+import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Control (control)
 import Data.Conduit
+import Data.Conduit.Binary
 import Data.String
 import Numbers.Types
-import Control.Concurrent.STM
+import System.IO
 
 import qualified Data.ByteString.Char8     as BS
 import qualified Network.Socket            as S
 import qualified Network.Socket.ByteString as SS
+import qualified Data.Conduit.List         as CL
 import qualified Data.Conduit.Network      as T
 import qualified Data.Conduit.Network.UDP  as U
 
-import qualified Data.Conduit.List as CL
 
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
@@ -79,27 +81,34 @@ runSink sink = do
 pushEvent :: [EventSink] -> Event -> IO ()
 pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
 
-sourceSocket :: Uri -> TBQueue BS.ByteString -> IO ()
-sourceSocket (Tcp h p) chan =
+sourceUri :: Uri -> TBQueue BS.ByteString -> IO ()
+sourceUri (File f)  q = sourceHandle stdin $$ sinkQueue q
+--    runResourceT $ either sourceIOHandle sourceFile (uriHandle f) $$ sinkQueue q
+sourceUri (Tcp h p) q =
     runResourceT $ T.runTCPServer (T.serverSettings p $ host h) app
   where
-    app d = T.appSource d $$ sinkQueue chan
-sourceSocket (Udp h p) chan = control $ \run ->
-    bracket open S.sClose (run . forever . sink)
+    app d = T.appSource d $$ sinkQueue q
+sourceUri (Udp h p) q =
+    control $ \run -> bracket open S.sClose (run . forever . sink)
   where
     open   = U.bindPort p $ host h
-    sink s = U.sourceSocket s 2048 $$ CL.map U.msgData =$ sinkQueue chan
+    sink s = U.sourceSocket s 2048 $$ CL.map U.msgData =$ sinkQueue q
 
-sinkSocket :: MonadResource m => Uri -> Sink BS.ByteString m ()
-sinkSocket uri = bracketP open S.sClose push
+sinkUri :: MonadResource m => Uri -> Sink BS.ByteString m ()
+sinkUri (File f) = either sinkIOHandle sinkFile (uriHandle f)
+sinkUri uri      = bracketP open S.sClose push
   where
-    open = fst `liftM` case uri of
-        Tcp h p -> T.getSocket h p
-        Udp h p -> T.getSocket h p
+    open = fst `liftM` T.getSocket (_host uri) (_port uri)
     push s = awaitForever $ liftIO . SS.sendAll s
 
 host :: BS.ByteString -> U.HostPreference
 host = fromString . BS.unpack
+
+uriHandle :: BS.ByteString -> Either (IO Handle) FilePath
+uriHandle "stdin"  = Left  $ return stdin
+uriHandle "stderr" = Left  $ return stderr
+uriHandle "stdout" = Left  $ return stdout
+uriHandle f        = Right $ BS.unpack f
 
 sourceQueue :: MonadIO m => TBQueue a -> Source m a
 sourceQueue q = forever $ liftIO (atomically $ readTBQueue q) >>= yield

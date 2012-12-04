@@ -30,7 +30,7 @@ main = withSocketsDo $ do
     buf <- atomically $ newTBQueue 4096
     infoL "Buffering..."
 
-    ls  <- mapM (asyncLink . (`sourceSocket` buf)) _listeners
+    ls  <- mapM (asyncLink . (`sourceUri` buf)) _listeners
     infoL "Listeners started..."
 
     ss  <- sequence $

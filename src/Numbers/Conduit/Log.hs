@@ -24,10 +24,10 @@ logSink :: [String] -> Maybe (IO EventSink)
 logSink [] = Nothing
 logSink es = Just $ do
     infoL $ "Logging '" <&& intercalate ", " es &&> "' events"
-    runSink $ awaitForever f =$ awaitForever (liftIO . infoL)
+    runSink $ awaitForever (liftIO . infoL . f)
   where
-    f (Flush ts p) = yield $ p &&> " " &&& ts
-    f _            = return ()
-
-
+    f (Receive bs) = "Receive: " <&& bs
+    f (Invalid bs) = "Invalid: " <&& bs
+    f (Parse k v)  = "Parse: "   <&& k &&> " " &&& v
+    f (Flush ts p) = "Flush: "   <&& p &&> " " &&& ts
 

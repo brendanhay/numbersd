@@ -21,7 +21,7 @@ import Numbers.Types
 downstreamSink :: Uri -> IO EventSink
 downstreamSink uri = do
     infoL $ "Connected to downstream " <&& uri
-    runSink $ awaitForever f =$ sinkSocket uri
+    runSink $ awaitForever f =$ sinkUri uri
   where
     f (Parse k m)  = yield "timers and shit"
     f (Flush ts p) = yield "counters only"
