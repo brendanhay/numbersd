@@ -34,7 +34,7 @@ storeSink qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
     (\_ -> return ())
     (\m -> awaitForever $ liftIO . parse sinks m)
   where
-    f k v ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k v
+    f k v ts = mapM_ (pushEvent sinks . Flush ts) $! calculate qs n k v
 
 parse :: [EventSink] -> M.Map Key Metric -> BS.ByteString -> IO ()
 parse sinks m bstr = do

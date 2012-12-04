@@ -170,7 +170,9 @@ instance Loggable [Key] where
         s = sbuild ","
 
 keyParser :: Parser Key
-keyParser = Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
+keyParser = do
+    k <- PC.takeTill (== ':') <* PC.char ':'
+    return $! Key $ strip k
   where
     strip s = foldl (flip $ uncurry replace) s unsafe
 
@@ -216,7 +218,7 @@ metricParser = do
     v <- PC.double <* PC.char '|'
     t <- PC.anyChar
     r <- optional (PC.char '|' *> PC.char '@' *> PC.double)
-    return . (k,) $
+    return . (k,) $!
         case t of
             'm' -> Timer $ V.singleton v
             'g' -> Gauge v
