@@ -23,6 +23,7 @@ module Numbers.Config (
 import Control.Monad                   (when)
 import Data.Lens.Common
 import Data.Lens.Template
+import Data.List                       (intersect)
 import Data.List.Split                 (splitOn)
 import Data.Monoid                     (mempty, mconcat)
 import Data.Version                    (showVersion)
@@ -103,15 +104,28 @@ info name = concat
 
 validate :: Config -> IO ()
 validate Config{..} = do
-    check (null _listeners)          "--listeners cannot be blank"
-    check (_buffer < 1)              "--buffer must be greater than 0"
-    check (_interval < 1)            "--interval must be greater than 0"
-    check (_interval >= _resolution) "--resolution must be greater than --interval"
-    check (_resolution > maxResolution) $ "--resolution must be less than " ++ show maxResolution
-    check (null _percentiles)        "--percentiles cannot be blank"
+    check (null _listeners)
+       "--listeners cannot be blank"
+    check (not . null $ _listeners `intersect` sinks)
+        "--listeners cannot contain any URI used by --{graphites,broadcasts,downstreams}"
+    check (not . null $ _listeners `intersect` ["file://stdout", "file://stderr"])
+        "--listeners cannot read from stdout or stderr"
+    check ("file://stdin" `elem` sinks)
+        "--{graphites,broadcasts,downstreams} cannot cannot write to stdin"
+    check (_buffer < 1)
+        "--buffer must be greater than 0"
+    check (_interval < 1)
+        "--interval must be greater than 0"
+    check (_interval >= _resolution)
+        "--resolution must be greater than --interval"
+    check (_resolution > maxResolution) $
+        "--resolution must be less than " ++ show maxResolution
+    check (null _percentiles)
+        "--percentiles cannot be blank"
     return ()
   where
     check p m = when p $ putStrLn m >> exitWith (ExitFailure 1)
+    sinks     = _graphites ++ _broadcasts ++ _downstreams
 validate _ = return ()
 
 flags :: String -> Mode Config

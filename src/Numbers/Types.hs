@@ -123,13 +123,17 @@ currentTime = (Time . truncate) `liftM` getPOSIXTime
 data Uri = File { _path :: BS.ByteString }
          | Tcp  { _host :: BS.ByteString, _port :: Int }
          | Udp  { _host :: BS.ByteString, _port :: Int }
+           deriving (Eq)
+
+instance Read Uri where
+    readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
+
+instance IsString Uri where
+    fromString = fromJust . decode uriParser . BS.pack
 
 whenTcp :: Uri -> Bool
 whenTcp (Tcp _ _) = True
 whenTcp _         = False
-
-instance Read Uri where
-    readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
