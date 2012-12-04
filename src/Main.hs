@@ -27,7 +27,7 @@ main :: IO ()
 main = withSocketsDo $ do
     Config{..} <- parseConfig
 
-    buf <- atomically $ newTBQueue 4096
+    buf <- atomically $ newTBQueue _buffer
     infoL "Buffering..."
 
     ls  <- mapM (asyncLink . (`sourceUri` buf)) _listeners

@@ -39,6 +39,7 @@ import qualified Data.ByteString.Char8 as BS
 data Config = Help | Version | Config
     { _listeners    :: [Uri]
     , _httpPort     :: Maybe Int
+    , _buffer       :: Int
     , _resolution   :: Int
     , _interval     :: Int
     , _percentiles  :: [Int]
@@ -56,6 +57,7 @@ instance Loggable Config where
         [ sbuild "Configuration:"
         , "\n -> Listeners:      " <&& _listeners
         , "\n -> HTTP Port:      " <&& _httpPort
+        , "\n -> Buffer Size:    " <&& _buffer
         , "\n -> Resolution:     " <&& _resolution
         , "\n -> Flush Interval: " <&& _interval
         , "\n -> Percentiles:    " <&& _percentiles
@@ -71,6 +73,7 @@ defaultConfig :: Config
 defaultConfig = Config
     { _listeners    = [Udp (BS.pack "0.0.0.0") 8125]
     , _httpPort     = Nothing
+    , _buffer       = 2048
     , _interval     = 10
     , _resolution   = 60
     , _percentiles  = [90]
@@ -101,6 +104,7 @@ info name = concat
 validate :: Config -> IO ()
 validate Config{..} = do
     check (null _listeners)          "--listeners cannot be blank"
+    check (1 > _buffer)              "--buffer must be greater than 0"
     check (1 > _interval)            "--interval must be greater than 0"
     check (_interval >= _resolution) "--resolution must be greater than --interval"
     check (_resolution > maxResolution)
@@ -119,6 +123,9 @@ flags name = mode name defaultConfig "Numbers"
 
     , flagReq ["http"] (parse (setL httpPort . Just . read)) "PORT"
       "HTTP port to serve the overview and time series on"
+
+    , flagReq ["buffer"] (one buffer) "INT"
+      "Number of packets to buffer, from all listeners"
 
     , flagReq ["resolution"] (one resolution) "INT"
       "Resolution in seconds for time series data"
