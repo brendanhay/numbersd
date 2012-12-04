@@ -14,6 +14,7 @@ module Numbers.Conduit.Log (
       logSink
     ) where
 
+import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Data.List              (intercalate)
 import Numbers.Conduit.Internal
@@ -24,10 +25,10 @@ logSink :: [String] -> Maybe (IO EventSink)
 logSink [] = Nothing
 logSink es = Just $ do
     infoL $ "Logging '" <&& intercalate ", " es &&> "' events"
-    runSink $ awaitForever (liftIO . infoL . f)
+    runSink $ awaitForever (f . g)
   where
-    f (Receive bs) = "Receive: " <&& bs
-    f (Invalid bs) = "Invalid: " <&& bs
-    f (Parse k v)  = "Parse: "   <&& k &&> " " &&& v
-    f (Flush ts p) = "Flush: "   <&& p &&> " " &&& ts
-
+    f (k, v) = when (k `elem` es) (liftIO $ infoL v)
+    g (Receive bs) = ("receive", "Receive: " <&& bs)
+    g (Invalid bs) = ("invalid", "Invalid: " <&& bs)
+    g (Parse k v)  = ("parse", "Parse: " <&& k &&> " " &&& v)
+    g (Flush ts p) = ("flush", "Flush: "   <&& p &&> " " &&& ts)
