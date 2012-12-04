@@ -55,7 +55,6 @@ import qualified Data.Conduit.List         as CL
 import qualified Data.Conduit.Network      as T
 import qualified Data.Conduit.Network.UDP  as U
 
-
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
