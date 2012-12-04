@@ -15,8 +15,8 @@
 module Properties.Generators where
 
 import Control.Applicative ((<$>))
+import Data.Vector (fromList)
 import Numbers.Types
-import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
@@ -33,7 +33,7 @@ instance Arbitrary Key where
 instance Arbitrary Metric where
     arbitrary = oneof
         [ Counter <$> arbitrary
-        , Timer   <$> arbitrary
+        , Timer . fromList <$> arbitrary
         , Gauge   <$> arbitrary
         , Set     <$> arbitrary
         ]

@@ -11,30 +11,30 @@
 --
 
 module Numbers.Whisper.Series (
-    -- * Aliases
+    -- * Types
       Resolution
     , Step
+    , Time
+    , Interval(..)
 
-    -- * Opaque
     , Series
-    , create
+    , resolution
+    , start
+    , end
+    , step
+    , values
 
     -- * Constants
     , maxResolution
 
-    -- * Operations
-    , toInterval
-    , resolution
-    , step
-    , start
-    , end
-    , values
+    -- * Series operations
+    , create
     , fetch
     , update
     ) where
 
 import Data.Aeson
-import Data.List     (intersperse)
+import Data.List
 import Numbers.Types
 
 type Resolution = Int
@@ -51,7 +51,7 @@ data Series = SS
     , step   :: Step
     , end    :: Interval
     , points :: [Double]
-    } deriving (Show)
+    } deriving (Eq, Show)
 
 maxResolution :: Resolution
 maxResolution = 5 * 60

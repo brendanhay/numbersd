@@ -32,7 +32,7 @@ executable numbersd
                      -with-rtsopts=-hC
 --                     -with-rtsopts=-s
 
-  build-depends:      base >= 4.5.1.0
+  build-depends:      base > 4 && < 5
                     , aeson
                     , async
                     , attoparsec
@@ -60,3 +60,50 @@ executable numbersd
                     , wai
                     , wai-extra
                     , warp
+
+
+test-suite numbersd-properties
+  type:               exitcode-stdio-1.0
+  main-is:            Properties.hs
+  hs-source-dirs:     src, test
+  default-language:   Haskell2010
+  default-extensions: FlexibleInstances
+                    , GeneralizedNewtypeDeriving
+                    , OverloadedStrings
+                    , RecordWildCards
+                    , TypeSynonymInstances
+  ghc-options:       -main-is Properties -Wall -threaded
+
+  build-depends:      base > 4 && < 5
+                    , aeson
+                    , async
+                    , attoparsec
+                    , blaze-builder
+                    , bytestring
+                    , cmdargs
+                    , conduit
+                    , containers
+                    , data-lens
+                    , data-lens-template
+                    , fast-logger
+                    , http-types
+                    , monad-control
+                    , network
+                    , network-conduit
+                    , regex-pcre
+                    , split
+                    , statistics
+                    , stm
+                    , stm-conduit
+                    , text
+                    , time
+                    , transformers
+                    , vector
+                    , wai
+                    , wai-extra
+                    , warp
+                    , test-framework
+                    , test-framework-quickcheck2
+                    , test-framework-hunit
+                    , HUnit
+                    , QuickCheck
