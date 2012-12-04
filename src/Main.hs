@@ -27,10 +27,10 @@ main :: IO ()
 main = withSocketsDo $ do
     Config{..} <- parseConfig
 
-    buf <- atomically $ newTBQueue 4096
+    buf <- atomically $ newTBQueue _buffer
     infoL "Buffering..."
 
-    ls  <- mapM (asyncLink . (`sourceSocket` buf)) _listeners
+    ls  <- mapM (asyncLink . (`sourceUri` buf)) _listeners
     infoL "Listeners started..."
 
     ss  <- sequence $
@@ -40,15 +40,12 @@ main = withSocketsDo $ do
             ++ map (graphiteSink _prefix) _graphites
             ++ map broadcastSink _broadcasts
             ++ map downstreamSink _downstreams
-
-    sto <- newStore _percentiles _interval ss
-    _   <- statusSink sto
     infoL "Sinks started..."
 
-    a   <- asyncLink $ storeSink buf sto
+    sto <- asyncLink $ storeSink _percentiles _interval ss buf
     infoL "Store started..."
 
-    void . waitAnyCancel $ a:ls
+    void . waitAnyCancel $ sto:ls
 
 asyncLink :: IO a -> IO (Async a)
 asyncLink io = do

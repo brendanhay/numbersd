@@ -11,11 +11,7 @@
 --
 
 module Numbers.Store (
-    -- * Opaque
-      Store
-    , newStore
-    , storeSink
-    , insert
+      storeSink
     ) where
 
 import Control.Monad
@@ -28,28 +24,34 @@ import Numbers.Types
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.Map           as M
 
-data Store = Store
-    { _sinks :: [EventSink]
-    , _tmap  :: M.Map Key Metric
-    }
-
-newStore :: [Int] -> Int -> [EventSink] -> IO Store
-newStore qs n sinks = Store sinks `fmap` M.empty (M.Continue n f)
+storeSink :: [Int]
+          -> Int
+          -> [EventSink]
+          -> TBQueue BS.ByteString
+          -> IO ()
+storeSink qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
+    (liftIO . M.empty $ M.Continue n f)
+    (\_ -> return ())
+    (\m -> awaitForever $ liftIO . parse sinks m)
   where
-    f k m ts = mapM_ (pushEvent sinks . Flush ts) $ calculate qs n k m
+    f k v ts = mapM_ (pushEvent sinks . Flush ts) $! calculate qs n k v
 
-storeSink :: TBQueue BS.ByteString -> Store -> IO ()
-storeSink q store = runResourceT $ sourceQueue q $$
-    (awaitForever $ liftIO . flip parse store)
-
-insert :: Key -> Metric -> Store -> IO ()
-insert key val Store{..} = M.update key (return . aggregate val) _tmap
-
-parse :: BS.ByteString -> Store -> IO ()
-parse bstr s@Store{..} = do
-    pushEvent _sinks $ Receive bstr
-    forM_ (filter (not . BS.null) $ BS.lines bstr) f
+parse :: [EventSink] -> M.Map Key Metric -> BS.ByteString -> IO ()
+parse sinks m bstr = forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
-    f b = case decode metricParser b of
-        Just (k, v) -> insert k v s
-        Nothing     -> pushEvent _sinks $ Invalid bstr
+    f b = do
+        pushEvent sinks $ Receive b
+        measure "packets_received" m
+        case decode metricParser b of
+            Just (k, v) -> do
+                measure "num_stats" m
+                insert k v m
+            Nothing     -> do
+                measure "bad_lines_seen" m
+                pushEvent sinks $ Invalid bstr
+
+measure :: Key -> M.Map Key Metric -> IO ()
+measure = flip insert (Counter 1)
+
+insert :: Key -> Metric -> M.Map Key Metric -> IO ()
+insert key val = M.update key (return . aggregate val)

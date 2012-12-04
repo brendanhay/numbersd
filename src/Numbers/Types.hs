@@ -120,8 +120,9 @@ instance Loggable Time where
 currentTime :: IO Time
 currentTime = (Time . truncate) `liftM` getPOSIXTime
 
-data Uri = Tcp { _host :: BS.ByteString, _port :: Int }
-         | Udp { _host :: BS.ByteString, _port :: Int }
+data Uri = File { _path :: BS.ByteString }
+         | Tcp  { _host :: BS.ByteString, _port :: Int }
+         | Udp  { _host :: BS.ByteString, _port :: Int }
 
 whenTcp :: Uri -> Bool
 whenTcp (Tcp _ _) = True
@@ -134,8 +135,9 @@ decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
 
 instance Loggable Uri where
-    build (Tcp h p) = "tcp://" <&& h &&& ":" <&& p
-    build (Udp h p) = "udp://" <&& h &&& ":" <&& p
+    build (File f)  = "file://" <&& f
+    build (Tcp h p) = "tcp://"  <&& h &&& ":" <&& p
+    build (Udp h p) = "udp://"  <&& h &&& ":" <&& p
 
 instance Loggable [Uri] where
     build = mconcat . intersperse (sbuild ", ") . map build
@@ -143,13 +145,14 @@ instance Loggable [Uri] where
 uriParser :: Parser Uri
 uriParser = do
     s <- PC.takeTill (== ':') <* string "://"
-    a <- PC.takeTill (== ':') <* PC.char ':'
-    p <- PC.decimal :: Parser Int
-    return $ case BS.unpack s of
-        "tcp"  -> Tcp a p
-        "udp"  -> Udp a p
+    case BS.unpack s of
+        "file" -> File <$> PC.takeByteString
+        "tcp"  -> Tcp  <$> host <*> port
+        "udp"  -> Udp  <$> host <*> port
         _      -> error "Unrecognized uri scheme"
-                  -- ^ TODO: investigate purposeful parser failures
+  where
+    host = PC.takeTill (== ':') <* PC.char ':'
+    port = PC.decimal :: Parser Int
 
 newtype Key = Key BS.ByteString
     deriving (Eq, Ord, Show)
@@ -170,7 +173,9 @@ instance Loggable [Key] where
         s = sbuild ","
 
 keyParser :: Parser Key
-keyParser = Key . strip <$> PC.takeTill (== ':') <* PC.char ':'
+keyParser = do
+    k <- PC.takeTill (== ':') <* PC.char ':'
+    return $! Key $ strip k
   where
     strip s = foldl (flip $ uncurry replace) s unsafe
 
@@ -216,7 +221,7 @@ metricParser = do
     v <- PC.double <* PC.char '|'
     t <- PC.anyChar
     r <- optional (PC.char '|' *> PC.char '@' *> PC.double)
-    return . (k,) $
+    return . (k,) $!
         case t of
             'm' -> Timer $ V.singleton v
             'g' -> Gauge v
