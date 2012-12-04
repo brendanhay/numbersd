@@ -83,7 +83,7 @@ pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
 
 sourceUri :: Uri -> TBQueue BS.ByteString -> IO ()
 sourceUri (File f)  q = runResourceT $
-    either sourceIOHandle sourceFile (uriHandle f) $$ sinkQueue q
+    either sourceFile sourceIOHandle (uriHandle f) $$ sinkQueue q
 sourceUri (Tcp h p) q = runResourceT $
     T.runTCPServer (T.serverSettings p $ host h) app
   where
@@ -95,7 +95,7 @@ sourceUri (Udp h p) q = control $ \run ->
     sink s = U.sourceSocket s 2048 $$ CL.map U.msgData =$ sinkQueue q
 
 sinkUri :: MonadResource m => Uri -> Sink BS.ByteString m ()
-sinkUri (File f) = either sinkIOHandle sinkFile (uriHandle f)
+sinkUri (File f) = either sinkFile sinkIOHandle (uriHandle f)
 sinkUri uri      = bracketP open S.sClose push
   where
     open = fst `liftM` T.getSocket (_host uri) (_port uri)
@@ -104,11 +104,14 @@ sinkUri uri      = bracketP open S.sClose push
 host :: BS.ByteString -> U.HostPreference
 host = fromString . BS.unpack
 
-uriHandle :: BS.ByteString -> Either (IO Handle) FilePath
-uriHandle "stdin"  = Left  $ return stdin
-uriHandle "stderr" = Left  $ return stderr
-uriHandle "stdout" = Left  $ return stdout
-uriHandle f        = Right $ BS.unpack f
+uriHandle :: BS.ByteString -> Either FilePath (IO Handle)
+uriHandle bs = f `fmap` case bs of
+    "stdin"  -> Right stdin
+    "stderr" -> Right stderr
+    "stdout" -> Right stdout
+    path     -> Left $ BS.unpack path
+  where
+    f hd = hSetBuffering hd LineBuffering >> return hd
 
 sourceQueue :: MonadIO m => TBQueue a -> Source m a
 sourceQueue q = forever $ liftIO (atomically $ readTBQueue q) >>= yield
