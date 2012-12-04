@@ -120,9 +120,9 @@ instance Loggable Time where
 currentTime :: IO Time
 currentTime = (Time . truncate) `liftM` getPOSIXTime
 
-data Uri = Tcp  { _host :: BS.ByteString, _port :: Int }
+data Uri = File { _path :: BS.ByteString }
+         | Tcp  { _host :: BS.ByteString, _port :: Int }
          | Udp  { _host :: BS.ByteString, _port :: Int }
-         | File { _path :: BS.ByteString }
 
 whenTcp :: Uri -> Bool
 whenTcp (Tcp _ _) = True

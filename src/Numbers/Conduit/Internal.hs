@@ -82,14 +82,14 @@ pushEvent :: [EventSink] -> Event -> IO ()
 pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
 
 sourceUri :: Uri -> TBQueue BS.ByteString -> IO ()
-sourceUri (File f)  q = sourceHandle stdin $$ sinkQueue q
---    runResourceT $ either sourceIOHandle sourceFile (uriHandle f) $$ sinkQueue q
-sourceUri (Tcp h p) q =
-    runResourceT $ T.runTCPServer (T.serverSettings p $ host h) app
+sourceUri (File f)  q = runResourceT $
+    either sourceIOHandle sourceFile (uriHandle f) $$ sinkQueue q
+sourceUri (Tcp h p) q = runResourceT $
+    T.runTCPServer (T.serverSettings p $ host h) app
   where
     app d = T.appSource d $$ sinkQueue q
-sourceUri (Udp h p) q =
-    control $ \run -> bracket open S.sClose (run . forever . sink)
+sourceUri (Udp h p) q = control $ \run ->
+    bracket open S.sClose (run . forever . sink)
   where
     open   = U.bindPort p $ host h
     sink s = U.sourceSocket s 2048 $$ CL.map U.msgData =$ sinkQueue q
