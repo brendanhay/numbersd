@@ -104,11 +104,10 @@ info name = concat
 validate :: Config -> IO ()
 validate Config{..} = do
     check (null _listeners)          "--listeners cannot be blank"
-    check (1 > _buffer)              "--buffer must be greater than 0"
-    check (1 > _interval)            "--interval must be greater than 0"
+    check (_buffer < 1)              "--buffer must be greater than 0"
+    check (_interval < 1)            "--interval must be greater than 0"
     check (_interval >= _resolution) "--resolution must be greater than --interval"
-    check (_resolution > maxResolution)
-              $ "--resolution must be less than " ++ show maxResolution
+    check (_resolution > maxResolution) $ "--resolution must be less than " ++ show maxResolution
     check (null _percentiles)        "--percentiles cannot be blank"
     return ()
   where
