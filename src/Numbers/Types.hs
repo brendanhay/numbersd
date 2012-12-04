@@ -26,7 +26,6 @@ module Numbers.Types (
 
     -- * Functions
     , currentTime
-    , whenTcp
     , zero
     , aggregate
     , calculate
@@ -130,10 +129,6 @@ instance Read Uri where
 
 instance IsString Uri where
     fromString = fromJust . decode uriParser . BS.pack
-
-whenTcp :: Uri -> Bool
-whenTcp (Tcp _ _) = True
-whenTcp _         = False
 
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
