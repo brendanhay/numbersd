@@ -45,10 +45,11 @@ parse sinks m bstr = forM_ (filter (not . BS.null) $ BS.lines bstr) f
         case decode metricParser b of
             Just (k, v) -> do
                 measure "num_stats" m
+                pushEvent sinks $ Parse k v
                 insert k v m
             Nothing     -> do
                 measure "bad_lines_seen" m
-                pushEvent sinks $ Invalid bstr
+                pushEvent sinks $ Invalid b
 
 measure :: Key -> M.Map Key Metric -> IO ()
 measure = flip insert (Counter 1)
