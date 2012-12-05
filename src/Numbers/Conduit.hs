@@ -65,20 +65,22 @@ import qualified Data.Conduit.List         as CL
 import qualified Data.Conduit.Network      as T
 import qualified Data.Conduit.Network.UDP  as U
 
+import Control.Monad.Trans.Class (lift)
+
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
            | Flush Time Point
              deriving (Show)
 
-type EventConduit a = Conduit Event IO a
+type EventConduit m a = Conduit Event m a
 
 data EventSink = EventSink
     { _queue :: TBQueue Event
     , _async :: Async ()
     }
 
-newSink :: EventConduit BS.ByteString -> Uri -> IO EventSink
+newSink :: EventConduit IO BS.ByteString -> Uri -> IO EventSink
 newSink con uri = runSink $ con =$ transPipe runResourceT (sinkUri uri)
 
 runSink :: Sink Event IO () -> IO EventSink
@@ -91,19 +93,19 @@ runSink sink = do
 pushEvent :: [EventSink] -> Event -> IO ()
 pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
 
-graphite :: String -> EventConduit BS.ByteString
+graphite :: Monad m => String -> EventConduit m BS.ByteString
 graphite str = awaitForever $ \e -> case e of
     Flush ts p -> yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
     _          -> return ()
   where
     pref = BS.pack str
 
-broadcast :: EventConduit BS.ByteString
+broadcast :: Monad m => EventConduit m BS.ByteString
 broadcast = awaitForever $ \e -> case e of
     Receive bs -> yield bs
     _          -> return ()
 
-downstream :: EventConduit BS.ByteString
+downstream :: Monad m => EventConduit m BS.ByteString
 downstream = awaitForever $ \e -> case e of
     Parse k m  -> yield "timers and shit"
     Flush ts p -> yield "counters only"

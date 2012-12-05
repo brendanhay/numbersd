@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 -- |
@@ -14,11 +15,9 @@
 
 module Properties.Conduit.Graphite (graphiteProperties) where
 
-import Blaze.ByteString.Builder                    (toByteString)
 import Control.Applicative                  hiding (empty)
-import Data.Attoparsec.Combinator                  (many1)
-import Data.List
-import Data.Maybe
+import Data.Conduit                         hiding (Flush)
+import Data.List.Split                             (splitOn)
 import Numbers.Conduit
 import Numbers.Types
 import Properties.Generators                       ()
@@ -26,17 +25,19 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
-import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Conduit.List         as CL
 
 graphiteProperties :: Test
 graphiteProperties = testGroup "graphite sink"
-    [-- testProperty "encodes flush event" prop_encodes_flush_event
+    [ testGroup "encodes"
+        [ testProperty "prefix" prop_encodes_prefix
+        ]
     ]
 
--- prop_encodes_flush_event :: EventEmit -> Bool
--- prop_encodes_flush_event e =
---     stripPrefix (inputPrefix e) (outputStr e) == Just (inputPrefix e)
+prop_encodes_prefix :: EventEmit -> Bool
+prop_encodes_prefix e =
+     outputPrefix e == inputPrefix e
 
 instance Arbitrary Point where
     arbitrary = do
@@ -45,17 +46,29 @@ instance Arbitrary Point where
         return $ P k $ fromIntegral v
 
 data EventEmit = EventEmit
-    { inputPoint  :: Point
-    , inputPrefix :: String
-    , outputStr   :: String
+    { inputPoint   :: Event
+    , inputPrefix  :: String
+    , outputPrefix :: String
     } deriving (Show)
+
+newtype SafeStr = SafeStr String
+
+instance Arbitrary SafeStr where
+    arbitrary = SafeStr <$> suchThat arbitrary f
+      where
+        f s | null s       = False
+            | '.' `elem` s = False
+            | otherwise    = True
 
 instance Arbitrary EventEmit where
     arbitrary = do
-        p <- arbitrary
-        NonEmpty s <- arbitrary
+        SafeStr s <- arbitrary
+        ts <- arbitrary
+        p  <- arbitrary
+        l  <- CL.sourceList [Flush ts p] $= graphite s $$ CL.consume
+        let r = BS.unpack $ BS.concat l
         return $ EventEmit
-            { inputPoint  = p
-            , inputPrefix = s
-            , outputStr   = BS.unpack . toByteString $ build p
+            { inputPoint   = Flush ts p
+            , inputPrefix  = s
+            , outputPrefix = head $ splitOn "." r
             }
