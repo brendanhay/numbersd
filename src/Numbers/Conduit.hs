@@ -85,6 +85,7 @@ runSink :: Sink Event IO () -> IO EventSink
 runSink sink = do
     q <- atomically $ newTBQueue 1024
     a <- async $ sourceQueue q $$ sink
+    link a
     return $ EventSink q a
 
 pushEvent :: [EventSink] -> Event -> IO ()
