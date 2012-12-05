@@ -44,7 +44,7 @@ module Numbers.Conduit (
     , S.withSocketsDo
     ) where
 
-import Blaze.ByteString.Builder           (Builder, toByteString)
+import Blaze.ByteString.Builder           (toByteString)
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Exception
@@ -53,7 +53,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Control        (control)
 import Data.Conduit                hiding (Flush)
 import Data.Conduit.Binary
-import Data.List
 import Data.String
 import Numbers.Log
 import Numbers.Types
