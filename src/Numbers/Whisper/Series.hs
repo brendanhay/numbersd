@@ -14,7 +14,7 @@ module Numbers.Whisper.Series (
     -- * Types
       Resolution
     , Step
-    , Time
+    , Time(..)
     , Interval(..)
 
     , Series

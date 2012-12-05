@@ -43,85 +43,99 @@ seriesProperties = testGroup "time series"
     , testProperty "for new ends last value equals update value" prop_new_end_last_value_equals_update_value
     , testProperty "update between start and end adds value" prop_update_between_start_and_end_adds_value
     ]
+  , testGroup "fetch" [
+      testProperty "fetching from start to end is series identity" prop_fetch_start_to_end_is_series_identity
+    , testProperty "fetching preserves the resolution" prop_fetch_preserves_resolution
+    , testProperty "fetching preserves the step" prop_fetch_preserves_step
+    , testProperty "fetched values are less than or equal to original" prop_fetch_values_less_than_or_equal_to_original
+    ]
   , testGroup "series" [
       testProperty "end is divisible by step" prop_end_divisible_by_step
-    , testProperty "start - end diff equals resolution * step" prop_start_end_equals_resolution_step
-    , testProperty "start equals end - resolution * step" prop_start_equals_end_resolution_step
+    , testProperty "start - end diff equals resolution * step" prop_start_end_equals_resolution_times_step
     , testProperty "values length equals resolution" prop_values_length_equals_resolution
     , testProperty "orders values by their insertion time" prop_ordered_by_insertion_time
-    ]
-  , testGroup "fetch" [
-
     ]
   ]
 
 prop_input_resolution_used_by_create :: SeriesCreate -> Bool
 prop_input_resolution_used_by_create sc =
-  inputCRes sc == outputCRes sc
+  createInputRes sc == createOutputRes sc
 
 prop_input_step_used_by_create :: SeriesCreate -> Bool
-prop_input_step_used_by_create sc =
-  inputCStep sc == outputCStep sc
+prop_input_step_used_by_create SeriesCreate{..} =
+  createInputStep == createOutputStep
 
 prop_end_less_than_or_equal_to_create_time :: SeriesCreate -> Bool
-prop_end_less_than_or_equal_to_create_time sc =
-  fromIntegral (outputCEnd sc) <= (fromIntegral (inputCTime sc) :: Int)
+prop_end_less_than_or_equal_to_create_time SeriesCreate{..} =
+  fromIntegral createOutputEnd <= (fromIntegral createInputTime :: Int)
 
 prop_end_within_step_of_create_time :: SeriesCreate -> Bool
-prop_end_within_step_of_create_time sc =
-  fromIntegral (outputCEnd sc) > (fromIntegral (inputCTime sc) - (inputCStep sc) :: Int)
+prop_end_within_step_of_create_time SeriesCreate{..} =
+  fromIntegral createOutputEnd > (fromIntegral createInputTime - createInputStep :: Int)
 
 prop_last_value_equals_create_value :: SeriesCreate -> Bool
-prop_last_value_equals_create_value sc =
-  inputCVal sc == head (reverse (outputCValues sc))
+prop_last_value_equals_create_value SeriesCreate{..} =
+  createInputVal == last createOutputValues
 
 prop_total_values_equals_create_value :: SeriesCreate -> Bool
-prop_total_values_equals_create_value sc =
-  inputCVal sc == sum (outputCValues sc)
+prop_total_values_equals_create_value SeriesCreate{..} =
+  createInputVal == sum createOutputValues
 
 prop_resolution_preserved_by_update :: SeriesUpdate -> Bool
-prop_resolution_preserved_by_update su =
-  inputURes su == outputURes su
+prop_resolution_preserved_by_update SeriesUpdate{..} =
+  updateInputRes == updateOutputRes
 
 prop_step_preserved_by_update :: SeriesUpdate -> Bool
-prop_step_preserved_by_update su =
-  inputUStep su == outputUStep su
+prop_step_preserved_by_update SeriesUpdate{..} =
+  updateInputStep == updateOutputStep
 
 prop_old_values_ignored_by_update :: SeriesUpdate -> Property
-prop_old_values_ignored_by_update su =
-  isUpdateBeforeStart su ==> inputUSeries su == outputUSeries su
+prop_old_values_ignored_by_update su@SeriesUpdate{..} =
+  isUpdateBeforeStart su ==> updateInputSeries == updateOutputSeries
 
 prop_later_times_move_end_along_in_update :: SeriesUpdate -> Property
-prop_later_times_move_end_along_in_update su =
-  isUpdateAfterEnd su ==> inputUEnd su < outputUEnd su
+prop_later_times_move_end_along_in_update su@SeriesUpdate{..} =
+  isUpdateAfterEnd su ==> updateInputEnd < updateOutputEnd
 
 prop_new_end_less_than_or_equal_to_update_time :: SeriesUpdate -> Property
-prop_new_end_less_than_or_equal_to_update_time su =
-  isUpdateAfterEnd su ==> fromIntegral (outputUEnd su) <= (fromIntegral (inputUTime su) :: Int)
+prop_new_end_less_than_or_equal_to_update_time su@SeriesUpdate{..} =
+  isUpdateAfterEnd su ==> fromIntegral updateOutputEnd <= (fromIntegral updateInputTime :: Int)
 
 prop_new_end_within_step_of_create_time :: SeriesUpdate -> Property
-prop_new_end_within_step_of_create_time su =
-  isUpdateAfterEnd su ==> fromIntegral (outputUEnd su) > (fromIntegral (inputUTime su) - (inputUStep su) :: Int)
+prop_new_end_within_step_of_create_time su@SeriesUpdate{..} =
+  isUpdateAfterEnd su ==> fromIntegral updateOutputEnd > (fromIntegral updateInputTime - updateInputStep :: Int)
 
 prop_new_end_last_value_equals_update_value :: SeriesUpdate -> Property
-prop_new_end_last_value_equals_update_value su =
-  isUpdateAfterEnd su ==> inputUVal su == head (reverse (outputUValues su))
+prop_new_end_last_value_equals_update_value su@SeriesUpdate{..} =
+  isUpdateAfterEnd su ==> updateInputVal == last updateOutputValues
 
 prop_update_between_start_and_end_adds_value :: SeriesUpdate -> Property
-prop_update_between_start_and_end_adds_value su =
-  isUpdateBetweenStartAndEnd su ==> prettyClose (sum (inputUValues su) + inputUVal su) (sum (outputUValues su))
+prop_update_between_start_and_end_adds_value su@SeriesUpdate{..} =
+  isUpdateBetweenStartAndEnd su ==> prettyClose (sum updateInputValues + updateInputVal) (sum updateOutputValues)
+
+prop_fetch_start_to_end_is_series_identity :: Series -> Bool
+prop_fetch_start_to_end_is_series_identity series =
+  series == fetch (Time . fromIntegral $ start series) (Time . fromIntegral $ end series) series
+
+prop_fetch_preserves_resolution :: SeriesFetch -> Bool
+prop_fetch_preserves_resolution SeriesFetch{..} =
+  fetchInputRes == fetchOutputRes
+
+prop_fetch_preserves_step :: SeriesFetch -> Bool
+prop_fetch_preserves_step SeriesFetch{..} =
+  fetchInputStep == fetchOutputStep
+
+prop_fetch_values_less_than_or_equal_to_original :: SeriesFetch -> Bool
+prop_fetch_values_less_than_or_equal_to_original SeriesFetch{..} =
+  sum fetchOutputValues <= sum fetchInputValues
 
 prop_end_divisible_by_step :: Series -> Bool
 prop_end_divisible_by_step series =
   0 == fromIntegral (end series) `mod` step series
 
-prop_start_end_equals_resolution_step :: Series -> Bool
-prop_start_end_equals_resolution_step series =
+prop_start_end_equals_resolution_times_step :: Series -> Bool
+prop_start_end_equals_resolution_times_step series =
     fromIntegral (end series - start series) == (resolution series * step series)
-
-prop_start_equals_end_resolution_step :: Series -> Bool
-prop_start_equals_end_resolution_step series =
-    start series == (end series - fromIntegral (resolution series * step series))
 
 prop_values_length_equals_resolution :: Series -> Bool
 prop_values_length_equals_resolution series =
@@ -136,16 +150,16 @@ prop_ordered_by_insertion_time series =
     incr s  = fromIntegral (end s) + fromIntegral (step s)
 
 data SeriesCreate = SeriesCreate {
-    inputCRes :: Resolution
-  , inputCStep :: Step
-  , inputCTime :: Time
-  , inputCVal :: Double
-  , outputCSeries :: Series
-  , outputCRes :: Resolution
-  , outputCStep :: Step
-  , outputCStart :: Interval
-  , outputCEnd :: Interval
-  , outputCValues :: [Double]
+    createInputRes :: Resolution
+  , createInputStep :: Step
+  , createInputTime :: Time
+  , createInputVal :: Double
+  , createOutputSeries :: Series
+  , createOutputRes :: Resolution
+  , createOutputStep :: Step
+  , createOutputStart :: Interval
+  , createOutputEnd :: Interval
+  , createOutputValues :: [Double]
 } deriving Show
 
 instance Arbitrary SeriesCreate where
@@ -155,48 +169,48 @@ instance Arbitrary SeriesCreate where
     t <- arbitrary
     NonNegative v <- arbitrary
     let series = create r s t v
-    return $ SeriesCreate {
-      inputCRes = r
-    , inputCStep = s
-    , inputCTime = t
-    , inputCVal = v
-    , outputCSeries = series
-    , outputCRes = resolution series
-    , outputCStep = step series
-    , outputCStart = start series
-    , outputCEnd = end series
-    , outputCValues = values series
+    return SeriesCreate {
+      createInputRes = r
+    , createInputStep = s
+    , createInputTime = t
+    , createInputVal = v
+    , createOutputSeries = series
+    , createOutputRes = resolution series
+    , createOutputStep = step series
+    , createOutputStart = start series
+    , createOutputEnd = end series
+    , createOutputValues = values series
     }
 
 data SeriesUpdate = SeriesUpdate {
-    inputUTime :: Time
-  , inputUVal :: Double
-  , inputUSeries :: Series
-  , inputURes :: Resolution
-  , inputUStep :: Step
-  , inputUStart :: Interval
-  , inputUEnd :: Interval
-  , inputUValues :: [Double]
-  , outputUSeries :: Series
-  , outputURes :: Resolution
-  , outputUStep :: Step
-  , outputUStart :: Interval
-  , outputUEnd :: Interval
-  , outputUValues :: [Double]
+    updateInputTime :: Time
+  , updateInputVal :: Double
+  , updateInputSeries :: Series
+  , updateInputRes :: Resolution
+  , updateInputStep :: Step
+  , updateInputStart :: Interval
+  , updateInputEnd :: Interval
+  , updateInputValues :: [Double]
+  , updateOutputSeries :: Series
+  , updateOutputRes :: Resolution
+  , updateOutputStep :: Step
+  , updateOutputStart :: Interval
+  , updateOutputEnd :: Interval
+  , updateOutputValues :: [Double]
 } deriving Show
 
 isUpdateBeforeStart :: SeriesUpdate -> Bool
 isUpdateBeforeStart su =
-  (fromIntegral (inputUTime su) :: Int) < fromIntegral (inputUStart su)
+  (fromIntegral (updateInputTime su) :: Int) < fromIntegral (updateInputStart su)
 
 isUpdateAfterEnd :: SeriesUpdate -> Bool
 isUpdateAfterEnd su =
-  (fromIntegral (inputUTime su) :: Int) >= fromIntegral (inputUEnd su) + inputUStep su
+  (fromIntegral (updateInputTime su) :: Int) >= fromIntegral (updateInputEnd su) + updateInputStep su
 
 isUpdateBetweenStartAndEnd :: SeriesUpdate -> Bool
-isUpdateBetweenStartAndEnd su = 
-  (fromIntegral (inputUTime su) :: Int) >= fromIntegral (inputUStart su)
-   && (fromIntegral (inputUTime su) :: Int) < fromIntegral (inputUEnd su) + inputUStep su
+isUpdateBetweenStartAndEnd su =
+  (fromIntegral (updateInputTime su) :: Int) >= fromIntegral (updateInputStart su)
+   && (fromIntegral (updateInputTime su) :: Int) < fromIntegral (updateInputEnd su) + updateInputStep su
 
 instance Arbitrary SeriesUpdate where
   arbitrary = do
@@ -204,28 +218,72 @@ instance Arbitrary SeriesUpdate where
     NonNegative t <- arbitrary
     NonNegative v <- arbitrary
     let series = update t v s
-    return $ SeriesUpdate {
-      inputUTime = t
-    , inputUVal = v
-    , inputUSeries = s
-    , inputURes = resolution s
-    , inputUStep = step s
-    , inputUStart = start s
-    , inputUEnd = end s
-    , inputUValues = values s
-    , outputUSeries = series
-    , outputURes = resolution s
-    , outputUStep = step series
-    , outputUStart = start series
-    , outputUEnd = end series
-    , outputUValues = values series
+    return SeriesUpdate {
+      updateInputTime = t
+    , updateInputVal = v
+    , updateInputSeries = s
+    , updateInputRes = resolution s
+    , updateInputStep = step s
+    , updateInputStart = start s
+    , updateInputEnd = end s
+    , updateInputValues = values s
+    , updateOutputSeries = series
+    , updateOutputRes = resolution s
+    , updateOutputStep = step series
+    , updateOutputStart = start series
+    , updateOutputEnd = end series
+    , updateOutputValues = values series
+    }
+
+data SeriesFetch = SeriesFetch {
+    fetchInputFrom :: Time
+  , fetchInputTo :: Time
+  , fetchInputSeries :: Series
+  , fetchInputRes :: Resolution
+  , fetchInputStep :: Step
+  , fetchInputStart :: Interval
+  , fetchInputEnd :: Interval
+  , fetchInputValues :: [Double]
+  , fetchOutputSeries :: Series
+  , fetchOutputRes :: Resolution
+  , fetchOutputStep :: Step
+  , fetchOutputStart :: Interval
+  , fetchOutputEnd :: Interval
+  , fetchOutputValues :: [Double]
+} deriving Show
+
+instance Arbitrary SeriesFetch where
+  arbitrary = do
+    s <- arbitrary
+    NonNegative f <- arbitrary
+    NonNegative t <- arbitrary
+    let series = fetch f t s
+    return SeriesFetch {
+      fetchInputFrom = f
+    , fetchInputTo = t
+    , fetchInputSeries = s
+    , fetchInputRes = resolution s
+    , fetchInputStep = step s
+    , fetchInputStart = start s
+    , fetchInputEnd = end s
+    , fetchInputValues = values s
+    , fetchOutputSeries = series
+    , fetchOutputRes = resolution s
+    , fetchOutputStep = step series
+    , fetchOutputStart = start series
+    , fetchOutputEnd = end series
+    , fetchOutputValues = values series
     }
 
 instance Arbitrary Series where
   arbitrary = do
-    s0 <- outputCSeries <$> arbitrary
-    tvs <- arbitrary
-    return $ foldl (\s (NonNegative t, NonNegative v) -> update t v s) s0 tvs
+    s <- createOutputSeries <$> arbitrary
+    actions <- arbitrary
+    return $ foldl applyAction s actions
+    where
+      applyAction :: Series -> Either (NonNegative Time, NonNegative Time) (NonNegative Time, NonNegative Double) -> Series
+      applyAction s (Left (NonNegative f, NonNegative t)) = fetch f t s
+      applyAction s (Right (NonNegative t, NonNegative v)) = update t v s
 
 prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
 prettyClose a b | a > (b - 0.0001) && (a < b + 0.0001) = True
