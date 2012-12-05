@@ -12,7 +12,7 @@
 
 module Properties (main) where
 
-import Properties.GraphiteSink
+import Properties.Conduit.Graphite
 import Properties.Series
 import Test.Framework
 
