@@ -25,7 +25,7 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Conduit.List         as CL
+import qualified Data.Conduit.List     as CL
 
 graphiteProperties :: Test
 graphiteProperties = testGroup "graphite sink"
