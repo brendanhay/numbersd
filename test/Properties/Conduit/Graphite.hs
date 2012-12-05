@@ -13,7 +13,9 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Properties.Conduit.Graphite (graphiteProperties) where
+module Properties.Conduit.Graphite (
+      graphiteProperties
+    ) where
 
 import Data.Conduit                         hiding (Flush)
 import Data.List.Split                             (splitOn)
