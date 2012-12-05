@@ -79,7 +79,7 @@ data EventSink = EventSink
     }
 
 newSink :: EventConduit BS.ByteString -> Uri -> IO EventSink
-newSink c uri = runSink $ c =$ transPipe runResourceT (sinkUri uri)
+newSink con uri = runSink $ con =$ transPipe runResourceT (sinkUri uri)
 
 runSink :: Sink Event IO () -> IO EventSink
 runSink sink = do
@@ -91,11 +91,11 @@ pushEvent :: [EventSink] -> Event -> IO ()
 pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
 
 graphite :: String -> EventConduit BS.ByteString
-graphite s = awaitForever $ \e -> case e of
+graphite str = awaitForever $ \e -> case e of
     Flush ts p -> yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
     _          -> return ()
   where
-    pref = BS.pack s
+    pref = BS.pack str
 
 broadcast :: EventConduit BS.ByteString
 broadcast = awaitForever $ \e -> case e of
