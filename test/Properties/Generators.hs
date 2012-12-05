@@ -15,20 +15,24 @@
 module Properties.Generators where
 
 import Control.Applicative ((<$>))
-import Data.Vector (fromList)
+import Data.Vector         (fromList)
 import Numbers.Types
-import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Set              as S
 
--- TODO: Relax the restriction
-instance Arbitrary BS.ByteString where
-    arbitrary = BS.pack <$> listOf1 (elements ['A'..'z'])
+newtype SafeStr = SafeStr String
+
+instance Arbitrary SafeStr where
+    arbitrary = SafeStr <$> suchThat arbitrary f
+      where
+        f s | null s       = False
+            | '.' `elem` s = False
+            | otherwise    = True
 
 instance Arbitrary Key where
-    arbitrary = Key <$> arbitrary
+    arbitrary = Key . BS.pack <$> listOf1 (elements ['A'..'z'])
 
 instance Arbitrary Metric where
     arbitrary = oneof

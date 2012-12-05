@@ -15,12 +15,11 @@
 
 module Properties.Conduit.Graphite (graphiteProperties) where
 
-import Control.Applicative                  hiding (empty)
 import Data.Conduit                         hiding (Flush)
 import Data.List.Split                             (splitOn)
 import Numbers.Conduit
 import Numbers.Types
-import Properties.Generators                       ()
+import Properties.Generators
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
@@ -50,15 +49,6 @@ data EventEmit = EventEmit
     , inputPrefix  :: String
     , outputPrefix :: String
     } deriving (Show)
-
-newtype SafeStr = SafeStr String
-
-instance Arbitrary SafeStr where
-    arbitrary = SafeStr <$> suchThat arbitrary f
-      where
-        f s | null s       = False
-            | '.' `elem` s = False
-            | otherwise    = True
 
 instance Arbitrary EventEmit where
     arbitrary = do
