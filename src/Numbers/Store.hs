@@ -18,7 +18,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.STM
 import Data.Conduit             hiding (Flush)
-import Numbers.Conduit.Internal
+import Numbers.Conduit
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS

@@ -20,6 +20,7 @@ import Control.Monad
 import Data.Maybe               (catMaybes)
 import Numbers.Conduit
 import Numbers.Config
+import Numbers.Http
 import Numbers.Log
 import Numbers.Store
 
@@ -34,12 +35,12 @@ main = withSocketsDo $ do
     infoL "Listeners started..."
 
     ss  <- sequence $
-        catMaybes [ logSink _logEvents
-                  , httpSink _resolution _interval _httpPort
+        catMaybes [ sinkHttp _resolution _interval _httpPort
+                  , sinkLog _logEvents
                   ]
-            ++ map (graphiteSink _prefix) _graphites
-            ++ map broadcastSink _broadcasts
-            ++ map downstreamSink _downstreams
+        ++ map (newSink (graphite _prefix)) _graphites
+        ++ map (newSink broadcast) _broadcasts
+        ++ map (newSink downstream) _downstreams
     infoL "Sinks started..."
 
     sto <- asyncLink $ storeSink _percentiles _interval ss buf

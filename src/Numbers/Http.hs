@@ -1,5 +1,5 @@
 -- |
--- Module      : Numbers.Conduit.Http
+-- Module      : Numbers.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -10,8 +10,8 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Numbers.Conduit.Http (
-      httpSink
+module Numbers.Http (
+      sinkHttp
     ) where
 
 import Blaze.ByteString.Builder hiding (flush)
@@ -27,15 +27,15 @@ import Network.Wai.Handler.Warp
 import Network.HTTP.Types
 import Numbers.Log
 import Numbers.Types
-import Numbers.Conduit.Internal
+import Numbers.Conduit
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.Whisper       as W
 
 data ContentType = Json | Html | Text
 
-httpSink :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
-httpSink res step = fmap $ \port -> do
+sinkHttp :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
+sinkHttp res step = fmap $ \port -> do
     w <- W.newWhisper res step
 
     async (run port $ liftIO . serve w) >>= link
