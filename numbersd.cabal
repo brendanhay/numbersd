@@ -28,9 +28,7 @@ executable numbersd
                     , RecordWildCards
                     , TypeSynonymInstances
   ghc-options:       -Wall -O2 -rtsopts -threaded
-  ghc-prof-options:  -Wall -O2 -prof -fprof-auto -auto-all
-                     -with-rtsopts=-hC
---                     -with-rtsopts=-s
+  ghc-prof-options:  -Wall -O2 -prof -fprof-auto -auto-all -with-rtsopts=-p
 
   build-depends:      base > 4 && < 5
                     , aeson
@@ -60,7 +58,6 @@ executable numbersd
                     , wai
                     , wai-extra
                     , warp
-
 
 test-suite numbersd-properties
   type:               exitcode-stdio-1.0
