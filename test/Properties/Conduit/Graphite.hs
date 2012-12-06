@@ -52,12 +52,6 @@ prop_encodes_value :: EventEmit -> Bool
 prop_encodes_value e =
     kindaClose (inputValue e) (outputValue e)
 
-instance Arbitrary Point where
-    arbitrary = do
-        k             <- arbitrary
-        NonNegative v <- arbitrary
-        return $ P k v
-
 data EventEmit = EventEmit
     { inputPrefix  :: String
     , inputKey     :: Key

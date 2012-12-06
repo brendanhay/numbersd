@@ -47,6 +47,12 @@ instance Arbitrary Time where
         NonNegative n <- arbitrary
         return $ Time n
 
+instance Arbitrary Point where
+    arbitrary = do
+        k             <- arbitrary
+        NonNegative v <- arbitrary
+        return $ P k v
+
 instance (Ord k, Arbitrary k) => Arbitrary (S.Set k) where
     arbitrary = S.fromList <$> arbitrary
 
