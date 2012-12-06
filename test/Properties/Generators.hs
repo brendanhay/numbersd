@@ -14,12 +14,15 @@
 
 module Properties.Generators where
 
-import Control.Applicative ((<$>))
-import Data.Vector         (fromList)
+import Control.Applicative        ((<$>))
+import Data.Conduit        hiding (Flush)
+import Data.Vector                (fromList)
+import Numbers.Conduit
 import Numbers.Types
 import Test.QuickCheck
 
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Conduit.List     as CL
 import qualified Data.Set              as S
 
 newtype SafeStr = SafeStr String
@@ -56,6 +59,15 @@ instance Arbitrary Point where
 instance (Ord k, Arbitrary k) => Arbitrary (S.Set k) where
     arbitrary = S.fromList <$> arbitrary
 
+instance Arbitrary Event where
+    arbitrary = do
+        s <- BS.pack <$> arbitrary
+        k <- arbitrary
+        m <- arbitrary
+        t <- arbitrary
+        p <- arbitrary
+        elements [Receive s, Invalid s, Parse k m, Flush t p]
+
 prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
 prettyClose = thisClose 0.0001
 
@@ -66,3 +78,6 @@ thisClose :: (Num a, Fractional a, Ord a) => a -> a -> a -> Bool
 thisClose diff a b
     | a > (b - diff) && (a < b + diff) = True
     | otherwise                        = False
+
+conduitResult :: Monad m => Event -> EventConduit m a -> m [a]
+conduitResult evt con = CL.sourceList [evt] $= con $$ CL.consume

@@ -18,7 +18,6 @@ module Properties.Conduit.Graphite (
     ) where
 
 import Control.Applicative                  hiding (empty)
-import Data.Conduit                         hiding (Flush)
 import Data.Maybe
 import Numbers.Conduit
 import Numbers.Types
@@ -29,30 +28,44 @@ import Test.QuickCheck
 
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Conduit.List     as CL
 
 graphiteProperties :: Test
 graphiteProperties = testGroup "graphite sink"
-    [ testGroup "encodes"
-        [ testProperty "prefix" prop_encodes_prefix
-        , testProperty "key" prop_encodes_key
-        , testProperty "value" prop_encodes_value
+    [ testGroup "flush event"
+        [ testProperty "encodes prefix" prop_encodes_prefix
+        , testProperty "encodes key" prop_encodes_key
+        , testProperty "encodes value" prop_encodes_value
         ]
+    , testGroup "other events"
+         [ testProperty "are ignored" prop_ignores_non_flush_event
+         ]
     ]
 
-prop_encodes_prefix :: EventEmit -> Bool
-prop_encodes_prefix e =
-    inputPrefix e == outputPrefix e
+prop_encodes_prefix :: FlushEvent -> Bool
+prop_encodes_prefix evt = inputPrefix evt == outputPrefix evt
 
-prop_encodes_key :: EventEmit -> Bool
-prop_encodes_key e =
-    inputKey e == outputKey e
+prop_encodes_key :: FlushEvent -> Bool
+prop_encodes_key evt = inputKey evt == outputKey evt
 
-prop_encodes_value :: EventEmit -> Bool
-prop_encodes_value e =
-    kindaClose (inputValue e) (outputValue e)
+prop_encodes_value :: FlushEvent -> Bool
+prop_encodes_value evt = kindaClose (inputValue evt) (outputValue evt)
 
-data EventEmit = EventEmit
+prop_ignores_non_flush_event :: NonFlushEvent -> Bool
+prop_ignores_non_flush_event (NonFlushEvent _ bs) = null bs
+
+data NonFlushEvent = NonFlushEvent Event [BS.ByteString]
+    deriving (Show)
+
+instance Arbitrary NonFlushEvent where
+    arbitrary = do
+        e  <- suchThat arbitrary p
+        bs <- conduitResult e $ graphite ""
+        return $ NonFlushEvent e bs
+      where
+        p (Flush _ _) = False
+        p _           = True
+
+data FlushEvent = FlushEvent
     { inputPrefix  :: String
     , inputKey     :: Key
     , inputTime    :: Time
@@ -63,14 +76,14 @@ data EventEmit = EventEmit
     , outputValue  :: Double
     } deriving (Show)
 
-instance Arbitrary EventEmit where
+instance Arbitrary FlushEvent where
     arbitrary = do
         SafeStr ip  <- arbitrary
         it          <- arbitrary
         p@(P ik iv) <- arbitrary
-        bs          <- CL.sourceList [Flush it p] $= graphite ip $$ CL.consume
+        bs          <- conduitResult (Flush it p) (graphite ip)
         let (op, ok, ot, ov) = parse bs
-        return $ EventEmit
+        return $ FlushEvent
             { inputPrefix  = ip
             , inputKey     = ik
             , inputTime    = it
