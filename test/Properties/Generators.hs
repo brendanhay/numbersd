@@ -25,6 +25,9 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Conduit.List     as CL
 import qualified Data.Set              as S
 
+instance Arbitrary BS.ByteString where
+    arbitrary = BS.pack <$> arbitrary
+
 newtype SafeStr = SafeStr String
 
 instance Arbitrary SafeStr where
