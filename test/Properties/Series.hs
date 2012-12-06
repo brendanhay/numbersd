@@ -12,15 +12,16 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Properties.Series (seriesProperties) where
+module Properties.Series (
+      seriesProperties
+    ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative                  ((<$>))
 import Numbers.Whisper.Series
-import Properties.Generators                ()
+import Properties.Generators
 import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
-
 
 seriesProperties :: Test
 seriesProperties = testGroup "time series"
@@ -284,7 +285,3 @@ instance Arbitrary Series where
       applyAction :: Series -> Either (NonNegative Time, NonNegative Time) (NonNegative Time, NonNegative Double) -> Series
       applyAction s (Left (NonNegative f, NonNegative t)) = fetch f t s
       applyAction s (Right (NonNegative t, NonNegative v)) = update t v s
-
-prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
-prettyClose a b | a > (b - 0.0001) && (a < b + 0.0001) = True
-prettyClose _ _ = False

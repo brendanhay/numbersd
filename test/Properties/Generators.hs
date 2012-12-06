@@ -50,3 +50,13 @@ instance Arbitrary Time where
 instance (Ord k, Arbitrary k) => Arbitrary (S.Set k) where
     arbitrary = S.fromList <$> arbitrary
 
+prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
+prettyClose = thisClose 0.0001
+
+kindaClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
+kindaClose = thisClose 0.1
+
+thisClose :: (Num a, Fractional a, Ord a) => a -> a -> a -> Bool
+thisClose diff a b
+    | a > (b - diff) && (a < b + diff) = True
+    | otherwise                        = False
