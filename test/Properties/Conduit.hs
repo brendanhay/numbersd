@@ -85,7 +85,7 @@ instance Arbitrary GraphiteEvent where
         it          <- arbitrary
         p@(P ik iv) <- arbitrary
         bs          <- conduitResult (Flush it p) (graphite ip)
-        let (op, ok, ot, ov) = parse bs
+        let (op, ok, ot, ov) = parseGraphite bs
         return $ GraphiteEvent
             { inputPrefix  = ip
             , inputKey     = ik
@@ -97,8 +97,8 @@ instance Arbitrary GraphiteEvent where
             , outputValue  = ov
             }
 
-parse :: [BS.ByteString] -> (String, Key, Time, Double)
-parse = fromJust . decode format . BS.concat
+parseGraphite :: [BS.ByteString] -> (String, Key, Time, Double)
+parseGraphite = fromJust . decode format . BS.concat
   where
     format = do
         p <- PC.takeTill (== '.') <* PC.char '.'
