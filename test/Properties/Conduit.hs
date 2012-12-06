@@ -43,6 +43,9 @@ conduitProperties = testGroup "sinks"
         [ testProperty "doesn't modify received packets" prop_broadcast_doesnt_modify_received_packets
         , testProperty "ignores non receive events" prop_broadcast_ignores_non_receive_events
         ]
+    , testGroup "downstream"
+        [ testProperty "ignores non parse and flush events" prop_downstream_ignores_non_parse_flush_events
+        ]
     ]
 
 prop_graphite_encodes_prefix :: Graphite -> Bool
@@ -73,6 +76,14 @@ prop_broadcast_ignores_non_receive_events =
     forAll (conduitEvent broadcast p) null
   where
     p (Receive _) = False
+    p _           = True
+
+prop_downstream_ignores_non_parse_flush_events :: Property
+prop_downstream_ignores_non_parse_flush_events =
+    forAll (conduitEvent downstream p) null
+  where
+    p (Parse _ _) = False
+    p (Flush _ _) = False
     p _           = True
 
 conduitEvent :: EventConduit Gen BS.ByteString
