@@ -12,7 +12,7 @@
 
 module Properties (main) where
 
-import Properties.Conduit.Graphite
+import Properties.Conduit
 import Properties.Series
 import Test.Framework
 
@@ -21,6 +21,6 @@ main = defaultMain tests
 
 tests :: [Test]
 tests =
-    [ graphiteProperties
+    [ conduitProperties
     , seriesProperties
     ]

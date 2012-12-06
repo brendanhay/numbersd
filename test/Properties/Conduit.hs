@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 -- |
--- Module      : Properties.Conduit.Graphite
+-- Module      : Properties.Conduit
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
 -- License     : This Source Code Form is subject to the terms of
 --               the Mozilla Public License, v. 2.0.
@@ -13,8 +13,8 @@
 -- Portability : non-portable (GHC extensions)
 --
 
-module Properties.Conduit.Graphite (
-      graphiteProperties
+module Properties.Conduit (
+      conduitProperties
     ) where
 
 import Control.Applicative                  hiding (empty)
@@ -29,43 +29,46 @@ import Test.QuickCheck
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
 
-graphiteProperties :: Test
-graphiteProperties = testGroup "graphite sink"
+conduitProperties :: Test
+conduitProperties = testGroup "graphite sink"
     [ testGroup "flush event"
-        [ testProperty "encodes prefix" prop_encodes_prefix
-        , testProperty "encodes key" prop_encodes_key
-        , testProperty "encodes value" prop_encodes_value
+        [ testProperty "encodes prefix" prop_graphite_encodes_prefix
+        , testProperty "encodes key" prop_graphite_encodes_key
+        , testProperty "encodes value" prop_graphite_encodes_value
         ]
     , testGroup "other events"
-         [ testProperty "are ignored" prop_ignores_non_flush_event
+         [ testProperty "are ignored" prop_graphite_ignores_non_flush_event
          ]
     ]
 
-prop_encodes_prefix :: FlushEvent -> Bool
-prop_encodes_prefix evt = inputPrefix evt == outputPrefix evt
+prop_graphite_encodes_prefix :: GraphiteEvent -> Bool
+prop_graphite_encodes_prefix evt =
+    inputPrefix evt == outputPrefix evt
 
-prop_encodes_key :: FlushEvent -> Bool
-prop_encodes_key evt = inputKey evt == outputKey evt
+prop_graphite_encodes_key :: GraphiteEvent -> Bool
+prop_graphite_encodes_key evt =
+    inputKey evt == outputKey evt
 
-prop_encodes_value :: FlushEvent -> Bool
-prop_encodes_value evt = kindaClose (inputValue evt) (outputValue evt)
+prop_graphite_encodes_value :: GraphiteEvent -> Bool
+prop_graphite_encodes_value evt =
+    kindaClose (inputValue evt) (outputValue evt)
 
-prop_ignores_non_flush_event :: NonFlushEvent -> Bool
-prop_ignores_non_flush_event (NonFlushEvent _ bs) = null bs
+prop_graphite_ignores_non_flush_event :: Property
+prop_graphite_ignores_non_flush_event =
+    forAll (conduitEvent (graphite "") p) $ \(_, bs) -> null bs
+  where
+    p (Flush _ _) = False
+    p _           = True
 
-data NonFlushEvent = NonFlushEvent Event [BS.ByteString]
-    deriving (Show)
+conduitEvent :: EventConduit Gen BS.ByteString
+             -> (Event -> Bool)
+             -> Gen (Event, [BS.ByteString])
+conduitEvent con p = do
+    e  <- suchThat arbitrary p
+    bs <- conduitResult e con
+    return (e, bs)
 
-instance Arbitrary NonFlushEvent where
-    arbitrary = do
-        e  <- suchThat arbitrary p
-        bs <- conduitResult e $ graphite ""
-        return $ NonFlushEvent e bs
-      where
-        p (Flush _ _) = False
-        p _           = True
-
-data FlushEvent = FlushEvent
+data GraphiteEvent = GraphiteEvent
     { inputPrefix  :: String
     , inputKey     :: Key
     , inputTime    :: Time
@@ -76,14 +79,14 @@ data FlushEvent = FlushEvent
     , outputValue  :: Double
     } deriving (Show)
 
-instance Arbitrary FlushEvent where
+instance Arbitrary GraphiteEvent where
     arbitrary = do
         SafeStr ip  <- arbitrary
         it          <- arbitrary
         p@(P ik iv) <- arbitrary
         bs          <- conduitResult (Flush it p) (graphite ip)
         let (op, ok, ot, ov) = parse bs
-        return $ FlushEvent
+        return $ GraphiteEvent
             { inputPrefix  = ip
             , inputKey     = ik
             , inputTime    = it
