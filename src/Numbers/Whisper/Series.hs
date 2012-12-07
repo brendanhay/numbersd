@@ -23,6 +23,7 @@ module Numbers.Whisper.Series (
     , end
     , step
     , values
+    , datapoints
 
     -- * Constants
     , maxResolution
@@ -64,6 +65,16 @@ values = reverse . points
 
 start :: Series -> Interval
 start SS{..} = end - fromIntegral (length points * step)
+
+datapoints :: Series -> [(Interval, Double)]
+datapoints s = reverse $ zip (timeline (end s) (res s) (step s)) (values s)
+
+timeline :: Interval -> Resolution -> Step -> [Interval]
+timeline t r s =
+  take r $ iterate (decrementInterval s) t
+
+decrementInterval :: Step -> Interval -> Interval
+decrementInterval s (I t) = I (t - s)
 
 instance Loggable Interval where
     build (I i) = build i

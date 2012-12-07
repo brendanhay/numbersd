@@ -54,9 +54,12 @@ insert ts (P k v) Whisper{..} =
 
 json :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
 json from to w mks =
-    (copyLazyByteString . encode . object . map f) `liftM` fetch from to w mks
+    (copyLazyByteString . encode . map f) `liftM` fetch from to w mks
   where
-    f (Key k, s) = decodeUtf8 k .= toJSON s
+    f (Key k, s) = object [
+        "target" .= decodeUtf8 k
+      , "datapoints" .= toJSON (map (\(t, v) -> (v, t)) $ S.datapoints s)
+      ]
 
 text :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
 text from to w mks = (build . map f) `liftM` fetch from to w mks
