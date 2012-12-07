@@ -50,22 +50,29 @@ serve :: W.Whisper -> Request -> IO Response
 serve whis req
     | isNothing a = return unacceptable
     | otherwise   = case pathInfo req of
-        ["numbersd"]      -> series b whis
-        ["numbersd", key] -> series b whis
+        ["numbersd"]      -> series b whis (getTargets req)
         ["overview"]      -> return $ overview b []
         _                 -> return $ unknown b
   where
     a = getType req
     b = fromJust a
 
-series :: ContentType -> W.Whisper -> IO Response
-series typ whis = do
+series :: ContentType -> W.Whisper -> Maybe [Key] -> IO Response
+series typ whis mks = do
     ts <- currentTime
-    response typ status200 `liftM` f ts ts whis
+    response typ status200 `liftM` f ts ts whis mks
   where
     f = case typ of
         Json -> W.json
         _    -> W.text
+
+getTargets :: Request -> Maybe [Key]
+getTargets =
+  (\xs -> if null xs then Nothing else Just xs) . catMaybes . map target . queryString
+  where
+    target :: QueryItem -> Maybe Key
+    target ("target", Just x) = Just $ Key x
+    target _ = Nothing
 
 getType :: Request -> Maybe ContentType
 getType req = listToMaybe $ catMaybes [getTypeFromParam req, getTypeFromHeader req, Just Text]

@@ -24,9 +24,11 @@ module Numbers.Whisper (
     ) where
 
 import Blaze.ByteString.Builder        (Builder, copyLazyByteString)
+import Control.Applicative             ((<$>))
 import Control.Arrow                   (second)
 import Control.Monad                   (liftM)
 import Data.Aeson               hiding (json)
+import Data.Maybe
 import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
@@ -50,16 +52,26 @@ insert :: Time -> Point -> Whisper -> IO ()
 insert ts (P k v) Whisper{..} =
     M.update k (return . maybe (S.create _res _step ts v) (S.update ts v)) _db
 
-json :: Time -> Time -> Whisper -> IO Builder
-json from to w =
-    (copyLazyByteString . encode . object . map f) `liftM` fetch from to w
+json :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
+json from to w mks =
+    (copyLazyByteString . encode . object . map f) `liftM` fetch from to w mks
   where
     f (Key k, s) = decodeUtf8 k .= toJSON s
 
-text :: Time -> Time -> Whisper -> IO Builder
-text from to w = (build . map f) `liftM` fetch from to w
+text :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
+text from to w mks = (build . map f) `liftM` fetch from to w mks
   where
     f (Key k, s) = k &&> "," &&& s &&> "\n"
 
-fetch :: Time -> Time -> Whisper -> IO [(Key, Series)]
-fetch from to Whisper{..} = map (second (S.fetch from to)) `liftM` M.toList _db
+fetch :: Time -> Time -> Whisper -> Maybe [Key] -> IO [(Key, Series)]
+fetch from to Whisper{..}  mks = map (second (S.fetch from to)) `liftM`
+  case mks of
+   Nothing -> M.toList _db
+   Just ks -> catMaybes <$> mapM f ks
+  where
+    f :: Key -> IO (Maybe (Key, Series))
+    f k = do
+      mv <- M.lookup k _db
+      return $ (\v -> (k, v)) <$> mv
+      
+      
