@@ -47,6 +47,7 @@ executable numbersd
                     , network
                     , network-conduit
                     , regex-pcre
+                    , simple-sendfile < 0.2.9
                     , split
                     , statistics
                     , stm
@@ -88,6 +89,7 @@ test-suite numbersd-properties
                     , network
                     , network-conduit
                     , regex-pcre
+                    , simple-sendfile < 0.2.9
                     , split
                     , statistics
                     , stm
