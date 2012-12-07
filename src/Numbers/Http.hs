@@ -68,7 +68,19 @@ series typ whis = do
         _    -> W.text
 
 getType :: Request -> Maybe ContentType
-getType req = hAccept `lookup` requestHeaders req >>= f . parseHttpAccept
+getType req = listToMaybe $ catMaybes [getTypeFromParam req, getTypeFromHeader req]
+
+getTypeFromParam :: Request -> Maybe ContentType
+getTypeFromParam = listToMaybe . catMaybes . map format . queryString
+  where
+    format :: QueryItem -> Maybe ContentType
+    format ("format", Just "json") = Just Json
+    format ("format", Just "html") = Just Text
+    format ("format", Just "text") = Just Text
+    format _ = Nothing
+
+getTypeFromHeader :: Request -> Maybe ContentType
+getTypeFromHeader req = hAccept `lookup` requestHeaders req >>= f . parseHttpAccept
   where
     f h | p Json h  = return Json
         | p Html h  = return Text
