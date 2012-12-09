@@ -21,7 +21,7 @@ module Numbers.Conduit (
     , EventSink
     , newSink
     , runSink
-    , pushEvent
+    , pushEvents
 
     -- * Conduits
     , graphite
@@ -65,12 +65,11 @@ import qualified Data.Conduit.List         as CL
 import qualified Data.Conduit.Network      as T
 import qualified Data.Conduit.Network.UDP  as U
 
-import Control.Monad.Trans.Class (lift)
-
 data Event = Receive BS.ByteString
            | Invalid BS.ByteString
            | Parse Key Metric
-           | Flush Time Point
+           | Flush Key Metric Time
+           | Aggregate Point Time
              deriving (Show)
 
 type EventConduit m a = Conduit Event m a
@@ -90,13 +89,15 @@ runSink sink = do
     link a
     return $ EventSink q a
 
-pushEvent :: [EventSink] -> Event -> IO ()
-pushEvent hs evt = forM_ hs (\h -> atomically $ writeTBQueue (_queue h) evt)
+pushEvents :: [EventSink] -> [Event] -> IO ()
+pushEvents hs es = sequence_ [f h e | h <- hs, e <- es]
+  where
+    f h e = atomically $ writeTBQueue (_queue h) e
 
 graphite :: Monad m => String -> EventConduit m BS.ByteString
 graphite str = awaitForever $ \e -> case e of
-    Flush ts p -> yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
-    _          -> return ()
+    Aggregate p ts -> yield . toByteString $ pref &&> "." &&& p &&> " " &&& ts &&> "\n"
+    _              -> return ()
   where
     pref = BS.pack str
 
@@ -107,9 +108,8 @@ broadcast = awaitForever $ \e -> case e of
 
 downstream :: Monad m => EventConduit m BS.ByteString
 downstream = awaitForever $ \e -> case e of
-    Parse k m  -> yield "timers and shit"
-    Flush ts p -> yield "counters only"
-    _          -> return ()
+    Flush k m _ -> yield . toByteString $ build (k, m)
+    _           -> return ()
 
 sourceUri :: Uri -> TBQueue BS.ByteString -> IO ()
 sourceUri (File f)  q = runResourceT $
@@ -136,10 +136,11 @@ sinkLog [] = Nothing
 sinkLog es = Just $ runSink f
   where
     f = awaitForever $ \e -> g $ case e of
-         Receive bs -> ("receive", "Receive: " <&& bs)
-         Invalid bs -> ("invalid", "Invalid: " <&& bs)
-         Parse k v  -> ("parse"  , "Parse: "   <&& k &&> " " &&& v)
-         Flush ts p -> ("flush"  , "Flush: "   <&& p &&> " " &&& ts)
+         Receive bs     -> ("receive",   "Receive: "   <&& bs)
+         Invalid bs     -> ("invalid",   "Invalid: "   <&& bs)
+         Parse k v      -> ("parse"  ,   "Parse: "     <&& (k, v))
+         Flush k v ts   -> ("flush"  ,   "Flush: "     <&& (k, v) &&> " " &&& ts)
+         Aggregate p ts -> ("aggregate", "Aggregate: " <&& p &&> " " &&& ts)
     g (k, v) = when (k `elem` es) (liftIO $ infoL v)
 
 host :: BS.ByteString -> U.HostPreference

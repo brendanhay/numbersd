@@ -14,6 +14,7 @@ module Properties (main) where
 
 import Properties.Conduit
 import Properties.Series
+import Properties.Types
 import Test.Framework
 
 main :: IO ()
@@ -21,6 +22,7 @@ main = defaultMain tests
 
 tests :: [Test]
 tests =
-    [ conduitProperties
+    [ typeProperties
+    , conduitProperties
     , seriesProperties
     ]

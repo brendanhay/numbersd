@@ -34,22 +34,23 @@ storeSink qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
     (\_ -> return ())
     (\m -> awaitForever $ liftIO . parse sinks m)
   where
-    f k v ts = mapM_ (pushEvent sinks . Flush ts) $! calculate qs n k v
+    f k m ts = mapM_ (\p -> pushEvents sinks [Flush k m ts, Aggregate p ts])
+        $! calculate qs n k m
 
 parse :: [EventSink] -> M.Map Key Metric -> BS.ByteString -> IO ()
 parse sinks m bstr = forM_ (filter (not . BS.null) $ BS.lines bstr) f
   where
     f b = do
-        pushEvent sinks $ Receive b
+        pushEvents sinks [Receive b]
         measure "packets_received" m
-        case decode metricParser b of
+        case decode lineParser b of
             Just (k, v) -> do
                 measure "num_stats" m
-                pushEvent sinks $ Parse k v
+                pushEvents sinks [Parse k v]
                 insert k v m
-            Nothing     -> do
+            Nothing -> do
                 measure "bad_lines_seen" m
-                pushEvent sinks $ Invalid b
+                pushEvents sinks [Invalid b]
 
 measure :: Key -> M.Map Key Metric -> IO ()
 measure = flip insert (Counter 1)

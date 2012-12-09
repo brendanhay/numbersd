@@ -43,8 +43,8 @@ sinkHttp res step = fmap $ \port -> do
     infoL $ "Serving /overview and /numbersd/<key> on http://0.0.0.0:" <&& port
 
     runSink . awaitForever $ \e -> case e of
-        Flush ts p -> liftIO $ W.insert ts p w
-        _          -> return ()
+        Aggregate p ts -> liftIO $ W.insert ts p w
+        _              -> return ()
 
 serve :: W.Whisper -> Request -> IO Response
 serve whis req

@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
 -- Module      : Properties.Conduit
@@ -18,6 +18,7 @@ module Properties.Conduit (
     ) where
 
 import Control.Applicative                  hiding (empty)
+import Data.Attoparsec
 import Data.Maybe
 import Numbers.Conduit
 import Numbers.Types
@@ -33,38 +34,42 @@ conduitProperties :: Test
 conduitProperties = testGroup "sinks"
     [ testGroup "graphite"
         [ testGroup "flush event"
-            [ testProperty "encodes prefix" prop_graphite_encodes_prefix
-            , testProperty "encodes key" prop_graphite_encodes_key
-            , testProperty "encodes value" prop_graphite_encodes_value
+            [ testProperty "encodes prefix" prop_graphite_aggr_event_encodes_prefix
+            , testProperty "encodes key" prop_graphite_aggr_event_encodes_key
+            , testProperty "encodes value" prop_graphite_aggr_event_encodes_value
             ]
-        , testProperty "ignores non flush events" prop_graphite_ignores_non_flush_events
+        , testProperty "ignores non aggregate events" prop_graphite_ignores_non_aggr_events
         ]
     , testGroup "broadcast"
         [ testProperty "doesn't modify received packets" prop_broadcast_doesnt_modify_received_packets
         , testProperty "ignores non receive events" prop_broadcast_ignores_non_receive_events
         ]
     , testGroup "downstream"
-        [ testProperty "ignores non parse and flush events" prop_downstream_ignores_non_parse_flush_events
+        [ -- testGroup "flush event"
+--             [ testProperty "encodes key" prop_downstream_flush_event_encodes_key
+-- --            , testProperty "concats sets" prop_downstream_flush_event_concats_sets
+--             ]
+        testProperty "ignores non flush events" prop_downstream_ignores_non_flush_events
         ]
     ]
 
-prop_graphite_encodes_prefix :: Graphite -> Bool
-prop_graphite_encodes_prefix evt =
-    inputPrefix evt == outputPrefix evt
+prop_graphite_aggr_event_encodes_prefix :: Graphite -> Bool
+prop_graphite_aggr_event_encodes_prefix g =
+    inputPrefix g == outputPrefix g
 
-prop_graphite_encodes_key :: Graphite -> Bool
-prop_graphite_encodes_key evt =
-    inputKey evt == outputKey evt
+prop_graphite_aggr_event_encodes_key :: Graphite -> Bool
+prop_graphite_aggr_event_encodes_key g =
+    inputKey g == outputKey g
 
-prop_graphite_encodes_value :: Graphite -> Bool
-prop_graphite_encodes_value evt =
-    kindaClose (inputValue evt) (outputValue evt)
+prop_graphite_aggr_event_encodes_value :: Graphite -> Bool
+prop_graphite_aggr_event_encodes_value g =
+    kindaClose (inputValue g) (outputValue g)
 
-prop_graphite_ignores_non_flush_events :: Property
-prop_graphite_ignores_non_flush_events =
-    forAll (conduitEvent (graphite "") p) null
+prop_graphite_ignores_non_aggr_events :: Property
+prop_graphite_ignores_non_aggr_events =
+    forAll (conduitP (graphite "") p) null
   where
-    p (Flush _ _) = False
+    p Aggregate{} = False
     p _           = True
 
 prop_broadcast_doesnt_modify_received_packets :: Broadcast -> Bool
@@ -73,25 +78,69 @@ prop_broadcast_doesnt_modify_received_packets (Broadcast s bs) =
 
 prop_broadcast_ignores_non_receive_events :: Property
 prop_broadcast_ignores_non_receive_events =
-    forAll (conduitEvent broadcast p) null
+    forAll (conduitP broadcast p) null
   where
-    p (Receive _) = False
-    p _           = True
+    p Receive{} = False
+    p _         = True
 
-prop_downstream_ignores_non_parse_flush_events :: Property
-prop_downstream_ignores_non_parse_flush_events =
-    forAll (conduitEvent downstream p) null
+-- prop_downstream_flush_event_encodes_key :: Downstream -> Bool
+-- prop_downstream_flush_event_encodes_key d =
+--     let (oks, oms) = unzip . fromJust $ decode (many1 lineParser) $ BS.intercalate "\n" (inputDEncoded d)
+--     in all (== inputDKey d) oks
+
+-- prop_downstream_flush_event_sums_counters ::
+-- prop_downstream_flush_event_sums_counters =
+
+-- prop_downstream_flush_event_keeps_most_recent_gauge ::
+-- prop_downstream_flush_event_keeps_most_recent_gauge =
+
+-- prop_downstream_flush_event_concats_timers ::
+-- prop_downstream_flush_event_concats_timers =
+
+-- prop_downstream_flush_event_concats_sets :: Property
+-- prop_downstream_flush_event_concats_sets =
+--     forAll (downstreamP p) $ \d -> inputDMetrics d == outputDMetrics d
+--   where
+--     p Set{} = True
+--     p _     = False
+
+prop_downstream_ignores_non_flush_events :: Property
+prop_downstream_ignores_non_flush_events =
+    forAll (conduitP downstream p) null
   where
-    p (Parse _ _) = False
-    p (Flush _ _) = False
-    p _           = True
+    p Flush{} = False
+    p _       = True
 
-conduitEvent :: EventConduit Gen BS.ByteString
-             -> (Event -> Bool)
-             -> Gen [BS.ByteString]
-conduitEvent con p = do
+data Downstream = Downstream
+    { inputDKey      :: Key
+    , inputDMetrics  :: [Metric]
+    , inputDEncoded  :: [BS.ByteString]
+    , outputDKeys    :: [Key]
+    , outputDMetrics :: [Metric]
+    } deriving (Show)
+
+downstreamP :: (Metric -> Bool) -> Gen Downstream
+downstreamP p = do
+    ik  <- arbitrary
+    ims <- arbitrary >>= \(NonEmpty ms) -> return $ filter p ms
+    it  <- arbitrary
+    r   <- conduitResult (map (\v -> Flush ik v it) ims) downstream
+
+    return Downstream
+        { inputDKey      = ik
+        , inputDMetrics  = ims
+        , inputDEncoded  = r
+        , outputDKeys    = []
+        , outputDMetrics = []
+        }
+
+instance Arbitrary Downstream where
+    arbitrary = downstreamP $ const True
+
+conduitP :: EventConduit Gen BS.ByteString -> (Event -> Bool) -> Gen [BS.ByteString]
+conduitP con p = do
     e <- suchThat arbitrary p
-    conduitResult e con
+    conduitResult [e] con
 
 data Graphite = Graphite
     { inputPrefix  :: String
@@ -109,9 +158,9 @@ instance Arbitrary Graphite where
         SafeStr ip  <- arbitrary
         it          <- arbitrary
         p@(P ik iv) <- arbitrary
-        bs          <- conduitResult (Flush it p) (graphite ip)
+        bs          <- conduitResult [Aggregate p it] (graphite ip)
         let (op, ok, ot, ov) = parseGraphite bs
-        return $ Graphite
+        return Graphite
             { inputPrefix  = ip
             , inputKey     = ik
             , inputTime    = it
@@ -138,5 +187,5 @@ data Broadcast = Broadcast BS.ByteString [BS.ByteString]
 instance Arbitrary Broadcast where
     arbitrary = do
         s  <- arbitrary
-        bs <- conduitResult (Receive s) broadcast
+        bs <- conduitResult [Receive s] broadcast
         return $ Broadcast s bs

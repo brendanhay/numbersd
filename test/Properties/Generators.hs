@@ -19,6 +19,7 @@ import Data.Conduit        hiding (Flush)
 import Data.Vector                (fromList)
 import Numbers.Conduit
 import Numbers.Types
+import Numeric                    (showFFloat)
 import Test.QuickCheck
 
 import qualified Data.ByteString.Char8 as BS
@@ -38,12 +39,14 @@ instance Arbitrary SafeStr where
             | otherwise    = True
 
 instance Arbitrary Key where
-    arbitrary = Key . BS.pack <$> listOf1 (elements ['A'..'z'])
+    arbitrary = Key . BS.pack <$> (listOf1 $ elements alpha)
+      where
+        alpha = ['a'..'z'] ++ ['A'..'Z']
 
 instance Arbitrary Metric where
     arbitrary = oneof
         [ Counter <$> arbitrary
-        , Timer . fromList <$> arbitrary
+        , arbitrary >>= \(NonEmpty xs) -> return . Timer $ fromList xs
         , Gauge   <$> arbitrary
         , Set     <$> arbitrary
         ]
@@ -59,8 +62,12 @@ instance Arbitrary Point where
         NonNegative v <- arbitrary
         return $ P k v
 
-instance (Ord k, Arbitrary k) => Arbitrary (S.Set k) where
-    arbitrary = S.fromList <$> arbitrary
+instance Arbitrary (S.Set Double) where
+    arbitrary = do
+        NonEmpty xs <- arbitrary
+        return . S.fromList $ map f xs
+      where
+        f x = read $ showFFloat (Just 1) (x :: Double) ""
 
 instance Arbitrary Event where
     arbitrary = do
@@ -69,18 +76,24 @@ instance Arbitrary Event where
         m <- arbitrary
         t <- arbitrary
         p <- arbitrary
-        elements [Receive s, Invalid s, Parse k m, Flush t p]
-
-prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
-prettyClose = thisClose 0.0001
+        elements
+            [ Receive s
+            , Invalid s
+            , Parse k m
+            , Flush k m t
+            , Aggregate p t
+            ]
 
 kindaClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
 kindaClose = thisClose 0.1
+
+prettyClose :: (Num a, Fractional a, Ord a) => a -> a -> Bool
+prettyClose = thisClose 0.0001
 
 thisClose :: (Num a, Fractional a, Ord a) => a -> a -> a -> Bool
 thisClose diff a b
     | a > (b - diff) && (a < b + diff) = True
     | otherwise                        = False
 
-conduitResult :: Monad m => Event -> EventConduit m a -> m [a]
-conduitResult evt con = CL.sourceList [evt] $= con $$ CL.consume
+conduitResult :: Monad m => [Event] -> EventConduit m a -> m [a]
+conduitResult es con = CL.sourceList es $= con $$ CL.consume

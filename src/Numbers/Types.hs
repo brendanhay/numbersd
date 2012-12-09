@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 -- |
 -- Module      : Numbers.Types
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -29,12 +27,12 @@ module Numbers.Types (
     , zero
     , aggregate
     , calculate
-    , metricParser
+    , lineParser
     , decode
     ) where
 
 import Blaze.ByteString.Builder
-import Control.Arrow                     ((***), first)
+import Control.Arrow                     ((***), first, second)
 import Control.Applicative        hiding (empty)
 import Control.Monad
 import Data.Attoparsec.ByteString
@@ -173,7 +171,7 @@ instance Loggable [Key] where
 
 keyParser :: Parser Key
 keyParser = do
-    k <- PC.takeTill (== ':') <* PC.char ':'
+    k <- PC.takeTill (== ':')
     return $! Key $ strip k
   where
     strip s = foldl (flip $ uncurry replace) s unsafe
@@ -199,38 +197,59 @@ match :: Regex
 match = matchM
 
 data Metric = Counter Double
-            | Timer (V.Vector Double)
             | Gauge Double
+            | Timer (V.Vector Double)
             | Set (S.Set Double)
               deriving (Eq, Ord, Show)
 
-instance Loggable Metric where
-    build m = case m of
-        (Counter v) -> "Counter " <&& v
-        (Timer  vs) -> "Timer "   <&& V.toList vs
-        (Gauge   v) -> "Gauge "   <&& v
-        (Set    ss) -> "Set "     <&& S.toAscList ss
+instance Loggable (Key, Metric) where
+    build = build . second (:[])
 
-instance Loggable [Metric] where
-    build = mconcat . intersperse (sbuild ",") . map build
+instance Loggable (Key, [Metric]) where
+    build (k, ms) = k &&& s &&& (intersperse s . concat $ map f ms)
+      where
+        s   = sbuild ":"
+        f m = case m of
+            (Counter v) -> [v &&> "|c"]
+            (Gauge   v) -> [v &&> "|g"]
+            (Timer  vs) -> map (&&> "|ms") $ V.toList vs
+            (Set    ss) -> map (&&>  "|s") $ S.toAscList ss
 
-metricParser :: Parser (Key, Metric)
-metricParser = do
-    k <- keyParser
-    v <- PC.double <* PC.char '|'
-    t <- PC.anyChar
-    r <- optional (PC.char '|' *> PC.char '@' *> PC.double)
-    return . (k,) $!
-        case t of
-            'm' -> Timer $ V.singleton v
-            'g' -> Gauge v
-            's' -> Set $ S.singleton v
-            _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- Div by zero
+lineParser :: Parser (Key, Metric)
+lineParser = do
+     k  <- keyParser
+     ms <- metricsParser
+     return $! (k, foldl1 (flip aggregate . Just) ms)
+
+metricsParser :: Parser [Metric]
+metricsParser = many1 $ do
+    _ <- optional $ PC.char ':'
+    v <- valueParser
+    t <- typeParser
+    r <- optional sampleParser
+    return $! case t of
+        'g' -> Gauge v
+        'm' -> Timer $ V.singleton v
+        's' -> Set   $ S.singleton v
+        _   -> Counter $ maybe v (\n -> v * (1 / n)) r
+                                            -- ^ Div by zero
+
+valueParser :: Parser Double
+valueParser = PC.double <* PC.char '|'
+
+sampleParser :: Parser Double
+sampleParser = PC.char '|' *> PC.char '@' *> PC.double
+
+typeParser :: Parser Char
+typeParser = PC.char 'c'
+         <|> PC.char 'g'
+         <|> PC.char 'm' <* PC.char 's'
+         <|> PC.char 's'
 
 zero :: Metric -> Bool
 zero (Counter 0) = True
-zero (Timer  ns) = V.null ns
 zero (Gauge   0) = True
+zero (Timer  ns) = V.null ns
 zero (Set    ss) = S.null ss
 zero _           = False
 
@@ -259,7 +278,7 @@ calculate _  _ k (Gauge v) =
 calculate _  _ k (Set ss) =
     [ P ("sets" <> k <> "count") (fromIntegral $ S.size ss) ]
 calculate qs _ k (Timer vs) = concatMap (quantile k xs) qs <>
-    [ P ("timers" <> k <> "std") $ stdDev xs
+    [ P ("timers" <> k <> "std")   $ stdDev xs
     , P ("timers" <> k <> "upper") $ V.last xs
     , P ("timers" <> k <> "lower") $ V.head xs
     , P ("timers" <> k <> "count") . fromIntegral $ V.length xs
