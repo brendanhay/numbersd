@@ -23,13 +23,14 @@ module Numbers.Types (
     , Point(..)
 
     -- * Functions
+    , lineParser
+    , keyParser
+    , uriParser
+    , decode
     , currentTime
     , zero
     , aggregate
     , calculate
-    , lineParser
-    , uriParser
-    , decode
     ) where
 
 import Blaze.ByteString.Builder

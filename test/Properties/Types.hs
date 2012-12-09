@@ -18,9 +18,7 @@ module Properties.Types (
 
 import Prelude                              hiding (foldl)
 import Blaze.ByteString.Builder                    (toByteString)
-import Control.Applicative                  hiding (empty)
-import Data.Attoparsec
-import Data.Foldable                               (Foldable, toList)
+import Data.Foldable                               (toList)
 import Data.Maybe
 import Numbers.Types
 import Properties.Generators
@@ -28,18 +26,24 @@ import Test.Framework
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
-import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
 
 typeProperties :: Test
 typeProperties = testGroup "types"
     [ testGroup "uri"
-        [ testProperty "encode, then decode is equiv" prop_encode_decode_uri_equiv
+        [ testGroup "encode, then decode"
+              [ testProperty "uri is equiv" prop_encode_decode_uri_equiv
+              , testProperty "host is equiv" prop_encode_decode_uri_host_equiv
+              , testProperty "port is equiv" prop_encode_decode_uri_port_equiv
+              ]
+        ]
+    , testGroup "key"
+        [ testProperty "encode, then decode is equiv" prop_encode_decode_key_equiv
         ]
     , testGroup "metric"
         [ testGroup "encode, then decode"
-            [ testProperty "key is equiv" prop_encode_decode_key_equiv
-            , testProperty "metric is equiv" prop_encode_decode_metric_equiv
+            [ testProperty "key is equiv" prop_encode_decode_metric_key_equiv
+            , testProperty "metric is close enough" prop_encode_decode_metric_equiv
             ]
         ]
     ]
@@ -48,8 +52,20 @@ prop_encode_decode_uri_equiv :: EncodeUri -> Bool
 prop_encode_decode_uri_equiv u =
     inputUUri u == outputUUri u
 
-prop_encode_decode_key_equiv :: EncodeMetric -> Bool
-prop_encode_decode_key_equiv e =
+prop_encode_decode_uri_host_equiv :: EncodeUri -> Bool
+prop_encode_decode_uri_host_equiv u =
+    inputUHost u == outputUHost u
+
+prop_encode_decode_uri_port_equiv :: EncodeUri -> Bool
+prop_encode_decode_uri_port_equiv u =
+    inputUPort u == outputUPort u
+
+prop_encode_decode_key_equiv :: EncodeKey -> Bool
+prop_encode_decode_key_equiv k =
+    inputKKey k == outputKKey k
+
+prop_encode_decode_metric_key_equiv :: EncodeMetric -> Bool
+prop_encode_decode_metric_key_equiv e =
     inputMKey e == outputMKey e
 
 prop_encode_decode_metric_equiv :: EncodeMetric -> Bool
@@ -58,8 +74,12 @@ prop_encode_decode_metric_equiv e =
 
 data EncodeUri = EncodeUri
     { inputUUri     :: Uri
+    , inputUHost    :: BS.ByteString
+    , inputUPort    :: Int
     , inputUEncoded :: BS.ByteString
     , outputUUri    :: Uri
+    , outputUHost   :: BS.ByteString
+    , outputUPort   :: Int
     } deriving (Show)
 
 instance Arbitrary EncodeUri where
@@ -75,8 +95,34 @@ instance Arbitrary EncodeUri where
             ou = fromMaybe (File "failed") $ decode uriParser r
         return EncodeUri
             { inputUUri     = iu
+            , inputUHost    = BS.pack ih
+            , inputUPort    = ip
             , inputUEncoded = r
             , outputUUri    = ou
+            , outputUHost   = host ou
+            , outputUPort   = port ou ip
+            }
+      where
+        host (File f) = f
+        host u        = _host u
+        port File{} p = p
+        port u _      = _port u
+
+data EncodeKey = EncodeKey
+    { inputKKey     :: Key
+    , inputKEncoded :: BS.ByteString
+    , outputKKey    :: Key
+    } deriving (Show)
+
+instance Arbitrary EncodeKey where
+    arbitrary = do
+        ik <- arbitrary
+        let r  = toByteString $ build ik
+            ok = fromMaybe "failed" $ decode keyParser r
+        return EncodeKey
+            { inputKKey     = ik
+            , inputKEncoded = r
+            , outputKKey    = ok
             }
 
 -- | The very pinnacle of scientific engineering
