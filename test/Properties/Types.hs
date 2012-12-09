@@ -27,6 +27,8 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Set              as S
+import qualified Data.Vector           as V
 
 typeProperties :: Test
 typeProperties = testGroup "types"
@@ -44,6 +46,9 @@ typeProperties = testGroup "types"
         [ testGroup "encode, then decode"
             [ testProperty "key is equiv" prop_encode_decode_metric_key_equiv
             , testProperty "metric is close enough" prop_encode_decode_metric_equiv
+            ]
+        , testGroup "functions"
+            [ testProperty "metrics are not zeroed" prop_metric_is_not_zeroed
             ]
         ]
     ]
@@ -71,6 +76,20 @@ prop_encode_decode_metric_key_equiv e =
 prop_encode_decode_metric_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_equiv e =
     inputMMetric e `kindaCloseM` outputMMetric e
+
+prop_metric_is_not_zeroed :: Property
+prop_metric_is_not_zeroed =
+    forAll f (not . zero)
+  where
+    f = do
+        Positive v  <- arbitrary
+        NonEmpty xs <- arbitrary
+        elements
+            [ Counter v
+            , Gauge v
+            , Timer $ V.fromList xs
+            , Set $ S.fromList xs
+            ]
 
 data EncodeUri = EncodeUri
     { inputUUri     :: Uri
