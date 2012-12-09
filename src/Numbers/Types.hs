@@ -230,9 +230,9 @@ metricsParser = many1 $ do
     t <- typeParser
     r <- optional sampleParser
     return $! case t of
-        'g' -> Gauge v
-        'm' -> Timer $ V.singleton v
-        's' -> Set   $ S.singleton v
+        'g' -> Gauge   v
+        'm' -> Timer   $ V.singleton v
+        's' -> Set     $ S.singleton v
         _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- ^ Div by zero
 
 valueParser :: Parser Double

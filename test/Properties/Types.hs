@@ -95,9 +95,9 @@ prop_metric_is_not_zeroed =
         Positive v  <- arbitrary
         NonEmpty xs <- arbitrary
         elements [ Counter v
-                 , Gauge v
-                 , Timer $ V.fromList xs
-                 , Set   $ S.fromList xs
+                 , Gauge   v
+                 , Timer   $ V.fromList xs
+                 , Set     $ S.fromList xs
                  ]
 
 prop_aggregate_metric_with_nothing :: Metric -> Bool
