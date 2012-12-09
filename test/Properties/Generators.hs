@@ -32,16 +32,14 @@ instance Arbitrary BS.ByteString where
 newtype SafeStr = SafeStr String
 
 instance Arbitrary SafeStr where
-    arbitrary = SafeStr <$> suchThat arbitrary f
-      where
-        f s | null s       = False
-            | '.' `elem` s = False
-            | otherwise    = True
+    arbitrary = SafeStr <$> (listOf1 $ elements xs)
+        where
+          xs = ['_', '-'] ++ ['a'..'z'] ++ ['A'..'Z']
 
 instance Arbitrary Key where
-    arbitrary = Key . BS.pack <$> (listOf1 $ elements alpha)
-      where
-        alpha = ['a'..'z'] ++ ['A'..'Z']
+    arbitrary = do
+        SafeStr s <- arbitrary
+        return . Key $ BS.pack s
 
 instance Arbitrary Metric where
     arbitrary = oneof

@@ -28,6 +28,7 @@ module Numbers.Types (
     , aggregate
     , calculate
     , lineParser
+    , uriParser
     , decode
     ) where
 
@@ -120,7 +121,7 @@ currentTime = (Time . truncate) `liftM` getPOSIXTime
 data Uri = File { _path :: BS.ByteString }
          | Tcp  { _host :: BS.ByteString, _port :: Int }
          | Udp  { _host :: BS.ByteString, _port :: Int }
-           deriving (Eq)
+           deriving (Eq, Show)
 
 instance Read Uri where
     readsPrec _ a = return (fromJust . decode uriParser $ BS.pack a, "")

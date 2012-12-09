@@ -33,7 +33,10 @@ import qualified Data.ByteString.Char8 as BS
 
 typeProperties :: Test
 typeProperties = testGroup "types"
-    [ testGroup "metric"
+    [ testGroup "uri"
+        [ testProperty "encode, then decode is equiv" prop_encode_decode_uri_equiv
+        ]
+    , testGroup "metric"
         [ testGroup "encode, then decode"
             [ testProperty "key is equiv" prop_encode_decode_key_equiv
             , testProperty "metric is equiv" prop_encode_decode_metric_equiv
@@ -41,13 +44,40 @@ typeProperties = testGroup "types"
         ]
     ]
 
-prop_encode_decode_key_equiv :: Encode -> Bool
-prop_encode_decode_key_equiv e =
-    inputEKey e == outputEKey e
+prop_encode_decode_uri_equiv :: EncodeUri -> Bool
+prop_encode_decode_uri_equiv u =
+    inputUUri u == outputUUri u
 
-prop_encode_decode_metric_equiv :: Encode -> Bool
+prop_encode_decode_key_equiv :: EncodeMetric -> Bool
+prop_encode_decode_key_equiv e =
+    inputMKey e == outputMKey e
+
+prop_encode_decode_metric_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_equiv e =
-    inputEMetric e `kindaCloseM` outputEMetric e
+    inputMMetric e `kindaCloseM` outputMMetric e
+
+data EncodeUri = EncodeUri
+    { inputUUri     :: Uri
+    , inputUEncoded :: BS.ByteString
+    , outputUUri    :: Uri
+    } deriving (Show)
+
+instance Arbitrary EncodeUri where
+    arbitrary = do
+        SafeStr ih  <- arbitrary
+        Positive ip <- arbitrary
+        iu          <- elements
+                           [ File $ BS.pack ih
+                           , Tcp (BS.pack ih) ip
+                           , Udp (BS.pack ih) ip
+                           ]
+        let r  = toByteString $ build iu
+            ou = fromMaybe (File "failed") $ decode uriParser r
+        return EncodeUri
+            { inputUUri     = iu
+            , inputUEncoded = r
+            , outputUUri    = ou
+            }
 
 -- | The very pinnacle of scientific engineering
 kindaCloseM :: Metric -> Metric -> Bool
@@ -64,24 +94,24 @@ kindaCloseM a b = case (a, b) of
         i = toList x
         n = toList y
 
-data Encode = Encode
-    { inputEKey     :: Key
-    , inputEMetric  :: Metric
-    , outputEStr    :: BS.ByteString
-    , outputEKey    :: Key
-    , outputEMetric :: Metric
+data EncodeMetric = EncodeMetric
+    { inputMKey     :: Key
+    , inputMMetric  :: Metric
+    , outputMStr    :: BS.ByteString
+    , outputMKey    :: Key
+    , outputMMetric :: Metric
     } deriving (Show)
 
-instance Arbitrary Encode where
+instance Arbitrary EncodeMetric where
     arbitrary = do
         ik <- arbitrary
         im <- arbitrary
         let s        = toByteString $ build (ik, im)
             (ok, om) = fromMaybe ("failed", Counter 0) $ decode lineParser s
-        return Encode
-            { inputEKey     = ik
-            , inputEMetric  = im
-            , outputEStr    = s
-            , outputEKey    = ok
-            , outputEMetric = om
+        return EncodeMetric
+            { inputMKey     = ik
+            , inputMMetric  = im
+            , outputMStr    = s
+            , outputMKey    = ok
+            , outputMMetric = om
             }

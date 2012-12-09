@@ -18,7 +18,6 @@ module Properties.Conduit (
     ) where
 
 import Control.Applicative                  hiding (empty)
-import Data.Attoparsec
 import Data.Maybe
 import Numbers.Conduit
 import Numbers.Types
@@ -45,11 +44,10 @@ conduitProperties = testGroup "sinks"
         , testProperty "ignores non receive events" prop_broadcast_ignores_non_receive_events
         ]
     , testGroup "downstream"
-        [ -- testGroup "flush event"
---             [ testProperty "encodes key" prop_downstream_flush_event_encodes_key
--- --            , testProperty "concats sets" prop_downstream_flush_event_concats_sets
---             ]
-        testProperty "ignores non flush events" prop_downstream_ignores_non_flush_events
+        [ testGroup "flush event"
+            [ testProperty "encodes key" prop_downstream_flush_event_encodes_key
+            ]
+        , testProperty "ignores non flush events" prop_downstream_ignores_non_flush_events
         ]
     ]
 
@@ -83,13 +81,16 @@ prop_broadcast_ignores_non_receive_events =
     p Receive{} = False
     p _         = True
 
--- prop_downstream_flush_event_encodes_key :: Downstream -> Bool
--- prop_downstream_flush_event_encodes_key d =
---     let (oks, oms) = unzip . fromJust $ decode (many1 lineParser) $ BS.intercalate "\n" (inputDEncoded d)
---     in all (== inputDKey d) oks
+prop_downstream_flush_event_encodes_key :: Downstream -> Bool
+prop_downstream_flush_event_encodes_key d =
+    inputDKey d == outputDKey d
 
--- prop_downstream_flush_event_sums_counters ::
+-- prop_downstream_flush_event_sums_counters :: Propety
 -- prop_downstream_flush_event_sums_counters =
+--     forAll (downstreamP p) $\d ->
+--   where
+--     p (Flush _ Counter{} _) = True
+--     p _                     = False
 
 -- prop_downstream_flush_event_keeps_most_recent_gauge ::
 -- prop_downstream_flush_event_keeps_most_recent_gauge =
@@ -112,26 +113,26 @@ prop_downstream_ignores_non_flush_events =
     p _       = True
 
 data Downstream = Downstream
-    { inputDKey      :: Key
-    , inputDMetrics  :: [Metric]
-    , inputDEncoded  :: [BS.ByteString]
-    , outputDKeys    :: [Key]
-    , outputDMetrics :: [Metric]
+    { inputDKey     :: Key
+    , inputDMetric  :: Metric
+    , inputDEncoded :: BS.ByteString
+    , outputDKey    :: Key
+    , outputDMetric :: Metric
     } deriving (Show)
 
 downstreamP :: (Metric -> Bool) -> Gen Downstream
 downstreamP p = do
-    ik  <- arbitrary
-    ims <- arbitrary >>= \(NonEmpty ms) -> return $ filter p ms
-    it  <- arbitrary
-    r   <- conduitResult (map (\v -> Flush ik v it) ims) downstream
-
+    ik <- arbitrary
+    im <- suchThat arbitrary p
+    it <- arbitrary
+    r  <- BS.intercalate "\n" <$> conduitResult [Flush ik im it] downstream
+    let (ok, om) = fromMaybe ("failed", Counter 0) $ decode lineParser r
     return Downstream
-        { inputDKey      = ik
-        , inputDMetrics  = ims
-        , inputDEncoded  = r
-        , outputDKeys    = []
-        , outputDMetrics = []
+        { inputDKey     = ik
+        , inputDMetric  = im
+        , inputDEncoded = r
+        , outputDKey    = ok
+        , outputDMetric = om
         }
 
 instance Arbitrary Downstream where
