@@ -49,8 +49,10 @@ typeProperties = testGroup "types"
             [ testProperty "key is equiv" prop_encode_decode_metric_key_equiv
             , testProperty "metric is close enough" prop_encode_decode_metric_equiv
             ]
-        , testGroup "functions"
-            [ testProperty "zero" prop_metric_is_not_zeroed
+        , testProperty "is not zeroed" prop_metric_is_not_zeroed
+        , testGroup "aggregate"
+            [ testProperty "with nothing keeps original" prop_aggregate_metric_with_nothing
+            , testProperty "differing ctors keeps rvalue" prop_aggregate_disimilar_metrics_keep_rvalue
             ]
         ]
     ]
@@ -98,6 +100,24 @@ prop_metric_is_not_zeroed =
             , Timer $ V.fromList xs
             , Set $ S.fromList xs
             ]
+
+prop_aggregate_metric_with_nothing :: Metric -> Bool
+prop_aggregate_metric_with_nothing m =
+    m `aggregate` Nothing == m
+
+prop_aggregate_disimilar_metrics_keep_rvalue :: Property
+prop_aggregate_disimilar_metrics_keep_rvalue =
+    forAll f $ \(a, b) -> a `aggregate` (Just b) == b
+  where
+    f = suchThat arbitrary (not . uncurry similarM)
+
+similarM :: Metric -> Metric -> Bool
+similarM a b = case (a, b) of
+    (Counter{}, Counter{}) -> True
+    (Gauge{},   Gauge{})   -> True
+    (Timer{},   Timer{})   -> True
+    (Set{},     Set{})     -> True
+    _                      -> False
 
 data EncodeUri = EncodeUri
     { inputUUri     :: Uri

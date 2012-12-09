@@ -262,7 +262,7 @@ aggregate a (Just b) = b `f` a
     f (Counter x) (Counter y) = Counter $ x + y
     f (Timer   x) (Timer   y) = Timer   $ x V.++ y
     f (Set     x) (Set     y) = Set     $ x `S.union` y
-    f _           right       = right
+    f _           _           = b
 
 data Point = P Key Double
     deriving (Show)
