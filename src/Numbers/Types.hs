@@ -233,8 +233,7 @@ metricsParser = many1 $ do
         'g' -> Gauge v
         'm' -> Timer $ V.singleton v
         's' -> Set   $ S.singleton v
-        _   -> Counter $ maybe v (\n -> v * (1 / n)) r
-                                            -- ^ Div by zero
+        _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- ^ Div by zero
 
 valueParser :: Parser Double
 valueParser = PC.double <* PC.char '|'
