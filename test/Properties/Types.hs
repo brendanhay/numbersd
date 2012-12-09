@@ -20,6 +20,7 @@ import Prelude                              hiding (foldl)
 import Blaze.ByteString.Builder                    (toByteString)
 import Data.Foldable                               (toList)
 import Data.Maybe
+import Data.Monoid
 import Numbers.Types
 import Properties.Generators
 import Test.Framework
@@ -41,6 +42,7 @@ typeProperties = testGroup "types"
         ]
     , testGroup "key"
         [ testProperty "encode, then decode is equiv" prop_encode_decode_key_equiv
+        , testProperty "mappend/mconcat is dot delimited" prop_mconcat_keys_is_dot_delimited
         ]
     , testGroup "metric"
         [ testGroup "encode, then decode"
@@ -48,7 +50,7 @@ typeProperties = testGroup "types"
             , testProperty "metric is close enough" prop_encode_decode_metric_equiv
             ]
         , testGroup "functions"
-            [ testProperty "metrics are not zeroed" prop_metric_is_not_zeroed
+            [ testProperty "zero" prop_metric_is_not_zeroed
             ]
         ]
     ]
@@ -72,6 +74,12 @@ prop_encode_decode_key_equiv k =
 prop_encode_decode_metric_key_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_key_equiv e =
     inputMKey e == outputMKey e
+
+prop_mconcat_keys_is_dot_delimited :: [Key] -> Bool
+prop_mconcat_keys_is_dot_delimited ks =
+    length ks == BS.count '.' bstr
+  where
+    (Key bstr) = mconcat ks
 
 prop_encode_decode_metric_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_equiv e =
