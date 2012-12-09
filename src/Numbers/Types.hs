@@ -187,10 +187,10 @@ unsafe = map (first makeRegex . join (***) BS.pack) rs
          ]
 
 replace :: Regex -> BS.ByteString -> BS.ByteString -> BS.ByteString
-replace regex rep = go
+replace regex rep = f
   where
-    go s = case match regex s of
-        Just (a, _, c) -> a `BS.append` rep `BS.append` go c
+    f s = case match regex s of
+        Just (a, _, c) -> a `BS.append` rep `BS.append` f c
         _              -> s
 
 match :: Regex
