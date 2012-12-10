@@ -46,6 +46,8 @@ sinkHttp res step = fmap $ \port -> do
         Aggregate p ts -> liftIO $ W.insert ts p w
         _              -> return ()
 
+
+-- | serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
 serve :: W.Whisper -> Request -> IO Response
 serve whis req
     | isNothing a = return unacceptable
