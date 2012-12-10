@@ -76,5 +76,3 @@ fetch from to Whisper{..}  mks = map (second (S.fetch from to)) `liftM`
     f k = do
       mv <- M.lookup k _db
       return $ (\v -> (k, v)) <$> mv
-      
-      
