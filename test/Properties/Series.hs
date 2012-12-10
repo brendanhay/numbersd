@@ -16,14 +16,19 @@ module Properties.Series (
       seriesProperties
     ) where
 
+import Blaze.ByteString.Builder
 import Control.Applicative                  ((<$>))
+import Data.Maybe
+import Numbers.Types
 import Numbers.Whisper.Series
 import Properties.Generators
 import Test.Framework
+import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
+import Test.HUnit
 import Test.QuickCheck
 
-seriesProperties :: Test
+seriesProperties :: Test.Framework.Test
 seriesProperties = testGroup "time series"
   [ testGroup "create" [
       testProperty "input resolution used by create" prop_input_resolution_used_by_create
@@ -56,6 +61,12 @@ seriesProperties = testGroup "time series"
     , testProperty "values length equals resolution" prop_values_length_equals_resolution
     , testProperty "orders values by their insertion time" prop_ordered_by_insertion_time
     ]
+  , testGroup "examples" [
+      testCase "a worked example of a create" test_example_create
+    , testCase "a worked example of an update" test_example_update
+    --TODO: this test bombs
+--     , testCase "a worked example of a fetch" test_example_fetch
+    ]
   ]
 
 prop_input_resolution_used_by_create :: SeriesCreate -> Bool
@@ -76,11 +87,11 @@ prop_end_within_step_of_create_time SeriesCreate{..} =
 
 prop_last_value_equals_create_value :: SeriesCreate -> Bool
 prop_last_value_equals_create_value SeriesCreate{..} =
-  createInputVal == last createOutputValues
+  createInputVal == fromJust (last createOutputValues)
 
 prop_total_values_equals_create_value :: SeriesCreate -> Bool
 prop_total_values_equals_create_value SeriesCreate{..} =
-  createInputVal == sum createOutputValues
+  createInputVal == sum (catMaybes createOutputValues)
 
 prop_resolution_preserved_by_update :: SeriesUpdate -> Bool
 prop_resolution_preserved_by_update SeriesUpdate{..} =
@@ -108,11 +119,11 @@ prop_new_end_within_step_of_create_time su@SeriesUpdate{..} =
 
 prop_new_end_last_value_equals_update_value :: SeriesUpdate -> Property
 prop_new_end_last_value_equals_update_value su@SeriesUpdate{..} =
-  isUpdateAfterEnd su ==> updateInputVal == last updateOutputValues
+  isUpdateAfterEnd su ==> updateInputVal == fromJust (last updateOutputValues)
 
 prop_update_between_start_and_end_adds_value :: SeriesUpdate -> Property
 prop_update_between_start_and_end_adds_value su@SeriesUpdate{..} =
-  isUpdateBetweenStartAndEnd su ==> prettyClose (sum updateInputValues + updateInputVal) (sum updateOutputValues)
+  isUpdateBetweenStartAndEnd su ==> prettyClose (sum (catMaybes updateInputValues) + updateInputVal) (sum (catMaybes updateOutputValues))
 
 prop_fetch_start_to_end_is_series_identity :: Series -> Bool
 prop_fetch_start_to_end_is_series_identity series =
@@ -128,7 +139,7 @@ prop_fetch_preserves_step SeriesFetch{..} =
 
 prop_fetch_values_less_than_or_equal_to_original :: SeriesFetch -> Bool
 prop_fetch_values_less_than_or_equal_to_original SeriesFetch{..} =
-  sum fetchOutputValues <= sum fetchInputValues
+  sum (catMaybes fetchOutputValues) <= sum (catMaybes fetchInputValues)
 
 prop_end_divisible_by_step :: Series -> Bool
 prop_end_divisible_by_step series =
@@ -145,10 +156,54 @@ prop_values_length_equals_resolution series =
 prop_ordered_by_insertion_time :: Series -> Property
 prop_ordered_by_insertion_time series =
     forAll (vector $ resolution series) $ \xs ->
-        xs == values (foldl upd series xs)
+        (map Just xs) == values (foldl upd series xs)
   where
     upd s v = update (incr s) v s
     incr s  = fromIntegral (end s) + fromIntegral (step s)
+
+
+test_example_create :: Assertion
+test_example_create = do
+  let series = create 5 10 (Time 50000) 3.4
+  assertEqual "resolution" 5 (resolution series)
+  assertEqual "step" 10 (step series)
+  assertEqual "end" (I 50000) (end series)
+  assertEqual "start" (I 49950) (start series)
+  assertEqual "values"
+              [Nothing, Nothing, Nothing, Nothing, Just 3.4]
+              (values series)
+  assertEqual "build"
+              "49950,50000,10|None,None,None,None,3.4"
+              (toByteString $ build series)
+
+test_example_update :: Assertion
+test_example_update = do
+  let series = update 50010 4.5 $ create 5 10 (Time 50000) 3.4
+  assertEqual "resolution" 5 (resolution series)
+  assertEqual "step" 10 (step series)
+  assertEqual "end" (I 50010) (end series)
+  assertEqual "start" (I 49960) (start series)
+  assertEqual "values"
+              [Nothing, Nothing, Nothing, Just 3.4, Just 4.5]
+              (values series)
+  assertEqual "build"
+              "49960,50010,10|None,None,None,3.4,4.5"
+              (toByteString $ build series)
+
+-- test_example_fetch :: Assertion
+-- test_example_fetch = do
+--   let series = fetch (Time 49950) (Time 50020)
+--                  . update 50010 4.5 $ create 5 10 (Time 50000) 3.4
+--   assertEqual "resolution" 5 (resolution series)
+--   assertEqual "step" 10 (step series)
+--   assertEqual "end" (I 50020) (end series)
+--   assertEqual "start" (I 49970) (start series)
+--   assertEqual "values"
+--               [Nothing, Nothing, Just 3.4, Just 4.5, Nothing]
+--               (values series)
+--   assertEqual "build"
+--               "49970,50020,10|None,None,3.4,4.5,None"
+--               (toByteString $ build series)
 
 data SeriesCreate = SeriesCreate {
     createInputRes :: Resolution
@@ -160,7 +215,7 @@ data SeriesCreate = SeriesCreate {
   , createOutputStep :: Step
   , createOutputStart :: Interval
   , createOutputEnd :: Interval
-  , createOutputValues :: [Double]
+  , createOutputValues :: [Maybe Double]
 } deriving Show
 
 instance Arbitrary SeriesCreate where
@@ -191,27 +246,26 @@ data SeriesUpdate = SeriesUpdate {
   , updateInputStep :: Step
   , updateInputStart :: Interval
   , updateInputEnd :: Interval
-  , updateInputValues :: [Double]
+  , updateInputValues :: [Maybe Double]
   , updateOutputSeries :: Series
   , updateOutputRes :: Resolution
   , updateOutputStep :: Step
   , updateOutputStart :: Interval
   , updateOutputEnd :: Interval
-  , updateOutputValues :: [Double]
+  , updateOutputValues :: [Maybe Double]
 } deriving Show
 
 isUpdateBeforeStart :: SeriesUpdate -> Bool
-isUpdateBeforeStart su =
-  (fromIntegral (updateInputTime su) :: Int) < fromIntegral (updateInputStart su)
+isUpdateBeforeStart SeriesUpdate{..} =
+  (fromIntegral updateInputTime :: Int) < fromIntegral updateInputStart + updateInputStep
 
 isUpdateAfterEnd :: SeriesUpdate -> Bool
-isUpdateAfterEnd su =
-  (fromIntegral (updateInputTime su) :: Int) >= fromIntegral (updateInputEnd su) + updateInputStep su
+isUpdateAfterEnd SeriesUpdate{..} =
+  (fromIntegral updateInputTime :: Int) >= fromIntegral updateInputEnd + updateInputStep
 
 isUpdateBetweenStartAndEnd :: SeriesUpdate -> Bool
 isUpdateBetweenStartAndEnd su =
-  (fromIntegral (updateInputTime su) :: Int) >= fromIntegral (updateInputStart su)
-   && (fromIntegral (updateInputTime su) :: Int) < fromIntegral (updateInputEnd su) + updateInputStep su
+  not (isUpdateBeforeStart su) && not (isUpdateAfterEnd su)
 
 instance Arbitrary SeriesUpdate where
   arbitrary = do
@@ -244,13 +298,13 @@ data SeriesFetch = SeriesFetch {
   , fetchInputStep :: Step
   , fetchInputStart :: Interval
   , fetchInputEnd :: Interval
-  , fetchInputValues :: [Double]
+  , fetchInputValues :: [Maybe Double]
   , fetchOutputSeries :: Series
   , fetchOutputRes :: Resolution
   , fetchOutputStep :: Step
   , fetchOutputStart :: Interval
   , fetchOutputEnd :: Interval
-  , fetchOutputValues :: [Double]
+  , fetchOutputValues :: [Maybe Double]
 } deriving Show
 
 instance Arbitrary SeriesFetch where

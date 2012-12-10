@@ -36,6 +36,7 @@ module Numbers.Whisper.Series (
 
 import Data.Aeson
 import Data.List
+import Data.Maybe
 import Numbers.Types
 
 type Resolution = Int
@@ -51,7 +52,7 @@ data Series = SS
     { res    :: Resolution
     , step   :: Step
     , end    :: Interval
-    , points :: [Double]
+    , points :: [Maybe Double]
     } deriving (Eq, Show)
 
 maxResolution :: Resolution
@@ -60,14 +61,14 @@ maxResolution = 5 * 60
 resolution :: Series -> Resolution
 resolution = res
 
-values :: Series -> [Double]
+values :: Series -> [Maybe Double]
 values = reverse . points
 
 start :: Series -> Interval
 start SS{..} = end - fromIntegral (length points * step)
 
-datapoints :: Series -> [(Interval, Double)]
-datapoints s = reverse $ zip (timeline (end s) (res s) (step s)) (values s)
+datapoints :: Series -> [(Interval, Maybe Double)]
+datapoints s = zip (timeline (end s) (res s) (step s)) (values s)
 
 timeline :: Interval -> Resolution -> Step -> [Interval]
 timeline t r s =
@@ -81,18 +82,13 @@ instance Loggable Interval where
 
 instance Loggable Series where
     build s@SS{..} = start s &&& "," <&& end &&& "," <&& step &&& "|"
-        <&& intersperse (sbuild ",") (map build . reverse $ values s)
+      <&& intersperse (sbuild ",") (map (maybe (build noneStr) build) $ values s)
+
+noneStr :: String
+noneStr = "None"
 
 instance ToJSON Interval where
     toJSON (I i) = toJSON i
-
-instance ToJSON Series where
-    toJSON s@SS{..} = object
-        [ "start"  .= start s
-        , "end"    .= end
-        , "step"   .= step
-        , "values" .= values s
-        ]
 
 create :: Resolution -> Step -> Time -> Double -> Series
 create r s ts val
@@ -118,14 +114,14 @@ distance s from to = abs $ ceiling diff
   where
     diff = fromIntegral (abs to - abs from) / fromIntegral s :: Double
 
-replace :: Int -> Double -> [Double] -> [Double]
+replace :: Int -> Double -> [Maybe Double] -> [Maybe Double]
 replace _ _ []  = []
 replace n val (v:vs)
-    | n == 0    = (val + v):vs
+    | n == 0    = (Just $ val + fromMaybe 0 v):vs
     | otherwise = v:replace (n - 1) val vs
 
-singleton :: Int -> Double -> [Double]
-singleton n = (: replicate n 0)
+singleton :: Int -> Double -> [Maybe Double]
+singleton n x = (Just x) : replicate n Nothing
 
-extend :: Int -> Double -> [Double] -> [Double]
+extend :: Int -> Double -> [Maybe Double] -> [Maybe Double]
 extend n val = (singleton n val ++)
