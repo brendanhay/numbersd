@@ -93,15 +93,15 @@ instance ToJSON Interval where
 create :: Resolution -> Step -> Time -> Double -> Series
 create r s ts val
     | r > maxResolution = error $ "Resolution too high: " ++ show r
-    | otherwise         = SS r s (toInterval s ts) (singleton (r - 1) val)
+    | otherwise         = SS r s (toInterval s ts) (singleton (r - 1) (Just val))
 
 fetch :: Time -> Time -> Series -> Series
-fetch _ to s@SS{..} = append (toInterval step to) 0 s
+fetch _ to s@SS{..} = append (toInterval step to) Nothing s
 
 update :: Time -> Double -> Series -> Series
-update ts val s@SS{..} = append (toInterval step ts) val s
+update ts val s@SS{..} = append (toInterval step ts) (Just val) s
 
-append :: Interval -> Double -> Series -> Series
+append :: Interval -> Maybe Double -> Series -> Series
 append to val s@SS{..} = s { points = take res p, end = e }
   where
     d = distance step end to
@@ -114,14 +114,15 @@ distance s from to = abs $ ceiling diff
   where
     diff = fromIntegral (abs to - abs from) / fromIntegral s :: Double
 
-replace :: Int -> Double -> [Maybe Double] -> [Maybe Double]
+replace :: Int -> Maybe Double -> [Maybe Double] -> [Maybe Double]
 replace _ _ []  = []
-replace n val (v:vs)
+replace _ Nothing vs = vs
+replace n (Just val) (v:vs)
     | n == 0    = (Just $ val + fromMaybe 0 v):vs
-    | otherwise = v:replace (n - 1) val vs
+    | otherwise = v:replace (n - 1) (Just val) vs
 
-singleton :: Int -> Double -> [Maybe Double]
-singleton n x = (Just x) : replicate n Nothing
+singleton :: Int -> Maybe Double -> [Maybe Double]
+singleton n = (: replicate n Nothing)
 
-extend :: Int -> Double -> [Maybe Double] -> [Maybe Double]
+extend :: Int -> Maybe Double -> [Maybe Double] -> [Maybe Double]
 extend n val = (singleton n val ++)

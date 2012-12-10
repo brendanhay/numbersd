@@ -64,8 +64,7 @@ seriesProperties = testGroup "time series"
   , testGroup "examples" [
       testCase "a worked example of a create" test_example_create
     , testCase "a worked example of an update" test_example_update
-    --TODO: this test bombs
---     , testCase "a worked example of a fetch" test_example_fetch
+    , testCase "a worked example of a fetch" test_example_fetch
     ]
   ]
 
@@ -190,20 +189,20 @@ test_example_update = do
               "49960,50010,10|None,None,None,3.4,4.5"
               (toByteString $ build series)
 
--- test_example_fetch :: Assertion
--- test_example_fetch = do
---   let series = fetch (Time 49950) (Time 50020)
---                  . update 50010 4.5 $ create 5 10 (Time 50000) 3.4
---   assertEqual "resolution" 5 (resolution series)
---   assertEqual "step" 10 (step series)
---   assertEqual "end" (I 50020) (end series)
---   assertEqual "start" (I 49970) (start series)
---   assertEqual "values"
---               [Nothing, Nothing, Just 3.4, Just 4.5, Nothing]
---               (values series)
---   assertEqual "build"
---               "49970,50020,10|None,None,3.4,4.5,None"
---               (toByteString $ build series)
+test_example_fetch :: Assertion
+test_example_fetch = do
+  let series = fetch (Time 49950) (Time 50020)
+                 . update 50010 4.5 $ create 5 10 (Time 50000) 3.4
+  assertEqual "resolution" 5 (resolution series)
+  assertEqual "step" 10 (step series)
+  assertEqual "end" (I 50020) (end series)
+  assertEqual "start" (I 49970) (start series)
+  assertEqual "values"
+              [Nothing, Nothing, Just 3.4, Just 4.5, Nothing]
+              (values series)
+  assertEqual "build"
+              "49970,50020,10|None,None,3.4,4.5,None"
+              (toByteString $ build series)
 
 data SeriesCreate = SeriesCreate {
     createInputRes :: Resolution
