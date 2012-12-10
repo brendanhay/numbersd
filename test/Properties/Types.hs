@@ -43,6 +43,7 @@ typeProperties = testGroup "types"
         ]
     , testGroup "key"
         [ testProperty "encode, then decode is equiv" prop_encode_decode_key_equiv
+        , testProperty "decode strips unsafe chars" prop_decode_key_strips_unsafe
         , testProperty "mappend/mconcat is dot delimited" prop_mconcat_keys_is_dot_delimited
         ]
     , testGroup "metric"
@@ -52,8 +53,8 @@ typeProperties = testGroup "types"
             ]
         , testProperty "is not zeroed" prop_metric_is_not_zeroed
         , testGroup "aggregate"
-            [ testProperty "with nothing keeps original" prop_aggregate_metric_with_nothing
-            , testProperty "with different ctor keeps rvalue" prop_aggregate_disimilar_metrics_keep_rvalue
+            [ testProperty "with nothing, keeps original" prop_aggregate_metric_with_nothing
+            , testProperty "with different ctor, keeps rvalue" prop_aggregate_disimilar_metrics_keep_rvalue
             , testProperty "counters are summed" prop_aggregate_counters_are_summed
             , testProperty "gauges keep rvalue" prop_aggregate_gauges_keep_rvalue
             , testProperty "timers are prepended" prop_aggregate_timers_are_prepended
@@ -82,11 +83,20 @@ prop_encode_decode_metric_key_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_key_equiv e =
     inputMKey e == outputMKey e
 
+prop_decode_key_strips_unsafe :: UnsafeStr -> Bool
+prop_decode_key_strips_unsafe (UnsafeStr s) =
+    BS.all (\c -> c `elem` valid) k
+  where
+    (Key k) = fromMaybe "failed!" . decode keyParser . BS.pack $ map f s
+    f ':' = '_'
+    f c   = c
+    valid = ['a'..'z'] ++ ['0'..'9'] ++ ['A'..'Z'] ++ ['_', '-', '.']
+
 prop_mconcat_keys_is_dot_delimited :: [Key] -> Bool
 prop_mconcat_keys_is_dot_delimited ks =
-    length ks == BS.count '.' bstr
+    length ks == BS.count '.' s
   where
-    (Key bstr) = mconcat ks
+    (Key s) = mconcat ks
 
 prop_encode_decode_metric_equiv :: EncodeMetric -> Bool
 prop_encode_decode_metric_equiv e =
@@ -162,7 +172,7 @@ instance Arbitrary EncodeUri where
                                 , Udp (BS.pack ih) ip
                                 ]
         let r  = toByteString $ build iu
-            ou = fromMaybe (File "failed") $ decode uriParser r
+            ou = fromMaybe (File "failed!") $ decode uriParser r
         return EncodeUri
             { inputUUri     = iu
             , inputUHost    = BS.pack ih
@@ -188,7 +198,7 @@ instance Arbitrary EncodeKey where
     arbitrary = do
         ik <- arbitrary
         let r  = toByteString $ build ik
-            ok = fromMaybe "failed" $ decode keyParser r
+            ok = fromMaybe "failed!" $ decode keyParser r
         return EncodeKey
             { inputKKey     = ik
             , inputKEncoded = r
@@ -223,7 +233,7 @@ instance Arbitrary EncodeMetric where
         ik <- arbitrary
         im <- arbitrary
         let s        = toByteString $ build (ik, im)
-            (ok, om) = fromMaybe ("failed", Counter 0) $ decode lineParser s
+            (ok, om) = fromMaybe ("failed!", Counter 0) $ decode lineParser s
         return EncodeMetric
             { inputMKey     = ik
             , inputMMetric  = im

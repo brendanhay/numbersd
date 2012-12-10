@@ -30,11 +30,18 @@ instance Arbitrary BS.ByteString where
     arbitrary = BS.pack <$> arbitrary
 
 newtype SafeStr = SafeStr String
+    deriving (Show)
 
 instance Arbitrary SafeStr where
     arbitrary = SafeStr <$> (listOf1 $ elements xs)
         where
           xs = ['_', '-'] ++ ['a'..'z'] ++ ['A'..'Z']
+
+newtype UnsafeStr = UnsafeStr String
+    deriving (Show)
+
+instance Arbitrary UnsafeStr where
+    arbitrary = UnsafeStr <$> (listOf1 $ elements [' '..'~'])
 
 instance Arbitrary Key where
     arbitrary = do

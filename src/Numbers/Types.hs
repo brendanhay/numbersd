@@ -174,9 +174,10 @@ instance Loggable [Key] where
 keyParser :: Parser Key
 keyParser = do
     k <- PC.takeTill (== ':')
-    return $! Key $ strip k
-  where
-    strip s = foldl (flip $ uncurry replace) s unsafe
+    return $! Key (strip k)
+
+strip :: BS.ByteString -> BS.ByteString
+strip s = foldl (flip $ uncurry replace) s unsafe
 
 unsafe :: [(Regex, BS.ByteString)]
 unsafe = map (first makeRegex . join (***) BS.pack) rs
