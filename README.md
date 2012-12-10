@@ -184,6 +184,7 @@ in particular wrangling cabal-dev to obtain dependencies. I plan to offer pre-bu
 You will need reasonably new versions of GHC and the Haskell Platform which
 you can obtain [here](http://www.haskell.org/platform/), then run `make install` in the root directory to compile numbersd.
 
+There is also a Chef Cookbook which can be used to install numbersd, if that's how you swing: https://github.com/brendanhay/numbersd-cookbook
 
 ## Configuration
 
