@@ -81,7 +81,7 @@ instance Loggable Interval where
 
 instance Loggable Series where
     build s@SS{..} = start s &&& "," <&& end &&& "," <&& step &&& "|"
-        <&& intersperse (sbuild ",") (map build $ values s)
+        <&& intersperse (sbuild ",") (map build . reverse $ values s)
 
 instance ToJSON Interval where
     toJSON (I i) = toJSON i
