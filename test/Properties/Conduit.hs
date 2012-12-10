@@ -32,7 +32,7 @@ import qualified Data.ByteString.Char8 as BS
 conduitProperties :: Test
 conduitProperties = testGroup "sinks"
     [ testGroup "graphite"
-        [ testGroup "flush event"
+        [ testGroup "aggregate event"
             [ testProperty "encodes prefix" prop_graphite_aggr_event_encodes_prefix
             , testProperty "encodes key" prop_graphite_aggr_event_encodes_key
             , testProperty "encodes value" prop_graphite_aggr_event_encodes_value
