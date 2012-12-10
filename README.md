@@ -1,4 +1,4 @@
-# NumbersD
+# numbersd
 
 [![Build Status](https://secure.travis-ci.org/brendanhay/numbersd.png)](http://travis-ci.org/brendanhay/numbersd)
 
@@ -39,7 +39,7 @@ Table of Contents
 
 ## Functionality
 
-NumbersD has identical aggregation characteristics to StatsD. It differs significantly in terms of
+numbersd has identical aggregation characteristics to StatsD. It differs significantly in terms of
 philosophy and intended usage. Below are some of the behaviours available.
 
 ### Listeners
@@ -54,7 +54,7 @@ to listen upon multiple ports and protocols simultaneously.
 
 ### Overview and Time Series
 
-If an HTTP port is specified, NumbersD will start an embedded HTTP server. GET requests to
+If an HTTP port is specified, numbersd will start an embedded HTTP server. GET requests to
 the following request paths will be responsed with an appropriate content type:
 
 * `/overview.json` Internal counters and runtime information.
@@ -62,7 +62,7 @@ the following request paths will be responsed with an appropriate content type:
 * `/numbersd.json` JSON representation of the `.whisper` format above
 
 The `.whisper` response type is intended to be used from Nagios or other monitoring tools
-to connect directly to a `NumbersD` instance running alongside an application.
+to connect directly to a `numbersd` instance running alongside an application.
 
 There are a number of `check_graphite` Nagios NPRE plugins available which should work identically
 to pointing directly at an instance of Graphite.
@@ -96,7 +96,7 @@ are forwarded upon `flush`, all the others are forwarded unmodified.
 ## Scenarios
 
 The intent of many of the behaviours above, was to provide more granular mechanisms for scaling and organising
-a herirachy of metric aggregators. Here are some scenarios that prompted the development of NumbersD.
+a herirachy of metric aggregators. Here are some scenarios that prompted the development of numbersd.
 
 ### Monitoring
 
@@ -133,10 +133,10 @@ two between the application and Nagios:
 </p>
 **Figure 2**
 
-1. The application emits UDP packets via the loopback interface to a local NumbersD daemon.
+1. The application emits UDP packets via the loopback interface to a local numbersd daemon.
 2. NumbersD pushes metrics over a TCP connection to Graphite.
 3. Nagios invokes an NPRE check on the application host.
-4. The NPRE check calls the local NumbersD daemon's `/numbersd.whisper` time series API.
+4. The NPRE check calls the local numbersd daemon's `/numbersd.whisper` time series API.
 
 This has two primary advantages. Firstly, reliability - by ensuring UDP packets are only transmitted
 on the localhost. And secondly, by seperating the concerns of metric durability/storage/visualisation
@@ -307,4 +307,4 @@ For any problems, comments or feedback please create an issue [here on GitHub](g
 
 ## Licence
 
-NumbersD is released under the [Mozilla Public License Version 2.0](http://www.mozilla.org/MPL/)
+numbersd is released under the [Mozilla Public License Version 2.0](http://www.mozilla.org/MPL/)
