@@ -227,23 +227,18 @@ lineParser = do
 metricsParser :: Parser [Metric]
 metricsParser = many1 $ do
     _ <- optional $ PC.char ':'
-    v <- valueParser
-    t <- typeParser
-    r <- optional sampleParser
+    v <- value
+    t <- type'
+    r <- optional sample
     return $! case t of
         'g' -> Gauge   v
         'm' -> Timer   $ V.singleton v
         's' -> Set     $ S.singleton v
         _   -> Counter $ maybe v (\n -> v * (1 / n)) r -- ^ Div by zero
-
-valueParser :: Parser Double
-valueParser = PC.double <* PC.char '|'
-
-sampleParser :: Parser Double
-sampleParser = PC.char '|' *> PC.char '@' *> PC.double
-
-typeParser :: Parser Char
-typeParser = PC.char 'c'
+  where
+    value  = PC.double <* PC.char '|'
+    sample = PC.char '|' *> PC.char '@' *> PC.double
+    type'  = PC.char 'c'
          <|> PC.char 'g'
          <|> PC.char 'm' <* PC.char 's'
          <|> PC.char 's'
