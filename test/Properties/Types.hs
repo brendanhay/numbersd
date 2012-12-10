@@ -21,6 +21,7 @@ import Blaze.ByteString.Builder                    (toByteString)
 import Data.Foldable                               (toList)
 import Data.Maybe
 import Data.Monoid
+import Data.List                                   (union)
 import Numbers.Types
 import Properties.Generators
 import Test.Framework
@@ -52,7 +53,11 @@ typeProperties = testGroup "types"
         , testProperty "is not zeroed" prop_metric_is_not_zeroed
         , testGroup "aggregate"
             [ testProperty "with nothing keeps original" prop_aggregate_metric_with_nothing
-            , testProperty "differing ctors keeps rvalue" prop_aggregate_disimilar_metrics_keep_rvalue
+            , testProperty "with different ctor keeps rvalue" prop_aggregate_disimilar_metrics_keep_rvalue
+            , testProperty "counters are summed" prop_aggregate_counters_are_summed
+            , testProperty "gauges keep rvalue" prop_aggregate_gauges_keep_rvalue
+            , testProperty "timers are prepended" prop_aggregate_timers_are_prepended
+            , testProperty "sets are unioned" prop_aggregate_sets_are_unioned
             ]
         ]
     ]
@@ -109,6 +114,26 @@ prop_aggregate_disimilar_metrics_keep_rvalue =
     forAll f $ \(a, b) -> a `aggregate` (Just b) == b
   where
     f = suchThat arbitrary (not . uncurry similarM)
+
+prop_aggregate_counters_are_summed :: Double -> Double -> Bool
+prop_aggregate_counters_are_summed x y =
+    aggregate (Counter x) (Just $ Counter y) == Counter (x + y)
+
+prop_aggregate_gauges_keep_rvalue :: Double -> Double -> Bool
+prop_aggregate_gauges_keep_rvalue x y =
+    aggregate (Gauge x) (Just $ Gauge y) == Gauge y
+
+prop_aggregate_timers_are_prepended :: [Double] -> [Double] -> Bool
+prop_aggregate_timers_are_prepended xs ys =
+    aggregate (f xs) (Just $ f ys) == f (ys ++ xs)
+  where
+    f = Timer . V.fromList
+
+prop_aggregate_sets_are_unioned :: [Double] -> [Double] -> Bool
+prop_aggregate_sets_are_unioned xs ys =
+    aggregate (f xs) (Just $ f ys) == f (xs `union` ys)
+  where
+    f = Set . S.fromList
 
 similarM :: Metric -> Metric -> Bool
 similarM a b = case (a, b) of
