@@ -41,6 +41,7 @@ executable numbersd
                     , data-lens
                     , data-lens-template
                     , fast-logger
+                    , file-embed
                     , http-types
                     , monad-control
                     , network

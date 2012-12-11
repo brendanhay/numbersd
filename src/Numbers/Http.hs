@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 -- |
 -- Module      : Numbers.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -15,8 +16,10 @@ module Numbers.Http (
     ) where
 
 import Blaze.ByteString.Builder hiding (flush)
+import Control.Applicative
 import Control.Monad.IO.Class
 import Control.Concurrent.Async
+import Data.FileEmbed
 import Data.Maybe
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -25,9 +28,8 @@ import Numbers.Log
 import Numbers.Types
 import Numbers.Conduit
 
-import qualified Numbers.Whisper as W
-
-data Format = Raw | Pretty
+import qualified Data.ByteString.Char8 as BS
+import qualified Numbers.Whisper       as W
 
 sinkHttp :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 sinkHttp res step = fmap $ \port -> do
@@ -38,27 +40,18 @@ sinkHttp res step = fmap $ \port -> do
         Aggregate p ts -> liftIO $ W.insert ts p w
         _              -> return ()
 
--- | serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
+-- | Serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
 serve :: W.Whisper -> Request -> IO Response
 serve whis req = case pathInfo req of
-    ("numbersd":_) -> series whis (getFormat req) (getTargets req)
-    _              -> return unknown
+    ["numbersd"]           -> return index
+    ["numbersd", "render"] -> series whis $ getTargets req
+    ["javascripts.js"]     -> return javascripts
+    _                      -> return unknown
 
-series :: W.Whisper -> Format -> Maybe [Key] -> IO Response
-series whis fmt mks = do
-    now  <- currentTime
-    body <- case fmt of
-        Pretty -> W.raw now now whis mks
-        Raw    -> W.raw now now whis mks
-    return $ response status200 body
-
-getFormat :: Request -> Format
-getFormat req = case maybeParams fmt req of
-    Just (f:_) -> f
-    _          -> Pretty
-  where
-    fmt ("format", Just "raw") = Just Raw
-    fmt _                      = Nothing
+series :: W.Whisper -> Maybe [Key] -> IO Response
+series whis mks = do
+    now <- currentTime
+    success "text/plain" <$> W.raw now now whis mks
 
 getTargets :: Request -> Maybe [Key]
 getTargets = maybeParams target
@@ -72,11 +65,23 @@ maybeParams f = g . catMaybes . map f . queryString
     g [] = Nothing
     g xs = Just xs
 
-unknown :: Response
-unknown = response status404 $ copyByteString "Error: Not Found"
+success :: BS.ByteString -> Builder -> Response
+success = response status200
 
-response :: Status -> Builder -> Response
-response status = ResponseBuilder status
-    [ ("Content-Type", "text/plain")
+unknown :: Response
+unknown = response status404 "text/plain" $ copyByteString "Error: Not Found"
+
+response :: Status -> BS.ByteString -> Builder -> Response
+response status content = ResponseBuilder status
+    [ ("Content-Type", content)
     , ("Access-Control-Allow-Origin", "*")
     ]
+
+index :: Response
+index = file "text/html" $(embedFile "assets/index.html")
+
+javascripts :: Response
+javascripts = file "application/javascript" $(embedFile "assets/javascripts.js")
+
+file :: BS.ByteString -> BS.ByteString -> Response
+file content = success content . copyByteString
