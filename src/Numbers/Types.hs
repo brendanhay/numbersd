@@ -198,10 +198,10 @@ match :: Regex
       -> Maybe (BS.ByteString, BS.ByteString, BS.ByteString)
 match = matchM
 
-data Metric = Counter Double
-            | Gauge Double
-            | Timer (V.Vector Double)
-            | Set (S.Set Double)
+data Metric = Counter !Double
+            | Gauge   !Double
+            | Timer   !(V.Vector Double)
+            | Set     !(S.Set Double)
               deriving (Eq, Ord, Show)
 
 instance Loggable (Key, Metric) where
@@ -256,7 +256,7 @@ aggregate a (Just b) = b `f` a
     f (Set     x) (Set     y) = Set     $ x `S.union` y
     f _           _           = b
 
-data Point = P Key Double
+data Point = P !Key !Double
     deriving (Show)
 
 instance Loggable Point where
