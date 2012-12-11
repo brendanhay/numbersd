@@ -69,7 +69,6 @@ class Loggable a where
 
 sbuild :: String -> Builder
 sbuild = build . BS.pack
-{-# INLINE sbuild #-}
 
 instance Loggable Builder where
     build = id
