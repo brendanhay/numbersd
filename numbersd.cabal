@@ -28,7 +28,7 @@ executable numbersd
                     , RecordWildCards
                     , TypeSynonymInstances
   ghc-options:       -Wall -O2 -rtsopts -threaded
-  ghc-prof-options:  -Wall -O2 -prof -fprof-auto -auto-all -with-rtsopts=-p
+  ghc-prof-options:  -Wall -prof -fprof-auto -auto-all -with-rtsopts=-hc
 
   build-depends:      base > 4 && < 5
                     , async
