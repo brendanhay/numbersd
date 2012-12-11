@@ -30,10 +30,8 @@ import qualified Numbers.Map as M
 
 mapProperties :: Test
 mapProperties = testGroup "map"
-  [ testGroup "empty" [
-      testProperty "no values in an empty map" prop_no_vals_in_empty_map
-    , testProperty "no policy map is just a map" prop_no_policy_map_is_just_map
-    ]
+  [ testProperty "no values in an empty map" prop_no_vals_in_empty_map
+  , testProperty "no policy map is just a map" prop_no_policy_map_is_just_map
   ]
 
 prop_no_vals_in_empty_map :: Property
@@ -54,7 +52,7 @@ addAll :: TestData -> M.Map TestKey TestValue -> PropertyM IO ()
 addAll (TestData xs) m = run . void $ mapConcurrently (flip add m) xs
   where
     add :: (TestKey, TestValue) -> M.Map TestKey TestValue -> IO ()
-    add (k,TestValue v) = M.update k (return . maybe (TestValue v) (\(TestValue v') -> TestValue (v + v')))
+    add (k,TestValue v) = M.update k (maybe (TestValue v) (\(TestValue v') -> TestValue (v + v')))
 
 emptyNoPolicyMap :: PropertyM IO (M.Map TestKey TestValue)
 emptyNoPolicyMap = run $ M.empty M.NoPolicy

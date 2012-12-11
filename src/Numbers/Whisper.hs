@@ -50,7 +50,7 @@ newWhisper res step = do
 
 insert :: Time -> Point -> Whisper -> IO ()
 insert ts (P k v) Whisper{..} =
-    M.update k (return . maybe (S.create _res _step ts v) (S.update ts v)) _db
+    M.update k (maybe (S.create _res _step ts v) (S.update ts v)) _db
 
 json :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
 json from to w mks =

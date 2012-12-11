@@ -56,4 +56,4 @@ measure :: Key -> M.Map Key Metric -> IO ()
 measure = flip insert (Counter 1)
 
 insert :: Key -> Metric -> M.Map Key Metric -> IO ()
-insert key val = M.update key (return . aggregate val)
+insert key val = M.update key (aggregate val)
