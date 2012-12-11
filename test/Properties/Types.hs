@@ -18,7 +18,6 @@ module Properties.Types (
 
 import Prelude                              hiding (foldl)
 import Blaze.ByteString.Builder                    (toByteString)
-import Data.Foldable                               (toList)
 import Data.Maybe
 import Data.Monoid
 import Data.List                                   (union)
@@ -167,10 +166,10 @@ instance Arbitrary EncodeUri where
     arbitrary = do
         SafeStr ih  <- arbitrary
         Positive ip <- arbitrary
-        iu          <- elements [ File $ BS.pack ih
-                                , Tcp (BS.pack ih) ip
-                                , Udp (BS.pack ih) ip
-                                ]
+        iu <- elements [ File $ BS.pack ih
+                       , Tcp (BS.pack ih) ip
+                       , Udp (BS.pack ih) ip
+                       ]
         let r  = toByteString $ build iu
             ou = fromMaybe (File "failed!") $ decode uriParser r
         return EncodeUri
@@ -204,21 +203,6 @@ instance Arbitrary EncodeKey where
             , inputKEncoded = r
             , outputKKey    = ok
             }
-
--- | The very pinnacle of scientific engineering
-kindaCloseM :: Metric -> Metric -> Bool
-kindaCloseM a b = case (a, b) of
-    (Counter x, Counter y) -> kindaClose x y
-    (Gauge x,   Gauge y)   -> kindaClose x y
-    (Timer xs,  Timer ys)  -> f xs ys
-    (Set xs,    Set ys)    -> f xs ys
-    _                      -> False
-  where
-    f x y | length i /= length n = error "Not equal lengths"
-          | otherwise = and . map (uncurry kindaClose) $ zip i n
-      where
-        i = toList x
-        n = toList y
 
 data EncodeMetric = EncodeMetric
     { inputMKey     :: Key

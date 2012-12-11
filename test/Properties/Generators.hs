@@ -16,6 +16,7 @@ module Properties.Generators where
 
 import Control.Applicative        ((<$>))
 import Data.Conduit        hiding (Flush)
+import Data.Foldable              (toList)
 import Data.Vector                (fromList)
 import Numbers.Conduit
 import Numbers.Types
@@ -102,3 +103,18 @@ thisClose diff a b
 
 conduitResult :: Monad m => [Event] -> EventConduit m a -> m [a]
 conduitResult es con = CL.sourceList es $= con $$ CL.consume
+
+-- | The very pinnacle of scientific engineering
+kindaCloseM :: Metric -> Metric -> Bool
+kindaCloseM a b = case (a, b) of
+    (Counter x, Counter y) -> kindaClose x y
+    (Gauge x,   Gauge y)   -> kindaClose x y
+    (Timer xs,  Timer ys)  -> f xs ys
+    (Set xs,    Set ys)    -> f xs ys
+    _                      -> False
+  where
+    f x y | length i /= length n = error "Not equal lengths"
+          | otherwise = and . map (uncurry kindaClose) $ zip i n
+      where
+        i = toList x
+        n = toList y

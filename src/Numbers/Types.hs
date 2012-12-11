@@ -34,7 +34,7 @@ module Numbers.Types (
     ) where
 
 import Blaze.ByteString.Builder
-import Control.Arrow                     ((***), first, second)
+import Control.Arrow                     ((***), first)
 import Control.Applicative        hiding (empty)
 import Control.Monad
 import Data.Attoparsec.ByteString
@@ -206,17 +206,15 @@ data Metric = Counter Double
               deriving (Eq, Ord, Show)
 
 instance Loggable (Key, Metric) where
-    build = build . second (:[])
-
-instance Loggable (Key, [Metric]) where
-    build (k, ms) = k &&& s &&& (intersperse s . concat $ map f ms)
+    build (k, m) = k &&& s &&& f
       where
-        s   = sbuild ":"
-        f m = case m of
-            (Counter v) -> [v &&> "|c"]
-            (Gauge   v) -> [v &&> "|g"]
-            (Timer  vs) -> map (&&> "|ms") $ V.toList vs
-            (Set    ss) -> map (&&>  "|s") $ S.toAscList ss
+        s = sbuild ":"
+        f = case m of
+            Counter v -> v &&> "|c"
+            Gauge   v -> v &&> "|g"
+            Timer  vs -> g (&&> "|ms") $ V.toList vs
+            Set    ss -> g (&&>  "|s") $ S.toAscList ss
+        g h = mconcat . intersperse s . map h
 
 lineParser :: Parser (Key, Metric)
 lineParser = do
