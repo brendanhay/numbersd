@@ -13,6 +13,7 @@
 module Properties (main) where
 
 import Properties.Conduit
+import Properties.Map
 import Properties.Series
 import Properties.Types
 import Test.Framework
@@ -24,5 +25,6 @@ tests :: [Test]
 tests =
     [ typeProperties
     , conduitProperties
+    , mapProperties
     , seriesProperties
     ]
