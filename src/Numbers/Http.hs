@@ -79,9 +79,11 @@ response status content = ResponseBuilder status
 
 index :: Response
 index = file "text/html" $(embedFile "assets/index.html")
+{-# NOINLINE index #-}
 
 javascripts :: Response
 javascripts = file "application/javascript" $(embedFile "assets/javascripts.js")
+{-# NOINLINE javascripts #-}
 
 file :: BS.ByteString -> BS.ByteString -> Response
-file content = success content . copyByteString
+file content body = success content $! copyByteString body
