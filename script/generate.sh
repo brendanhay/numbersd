@@ -46,5 +46,5 @@ emit() {
 while true
 do
     emit
-    sleep "0.${RANDOM:0:1}"
+    sleep 0.05
 done

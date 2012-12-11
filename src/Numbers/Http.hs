@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 -- |
 -- Module      : Numbers.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>
@@ -15,14 +16,12 @@ module Numbers.Http (
     ) where
 
 import Blaze.ByteString.Builder hiding (flush)
-import Control.Monad
+import Control.Applicative
 import Control.Monad.IO.Class
 import Control.Concurrent.Async
-import Data.Aeson               hiding (json)
+import Data.FileEmbed
 import Data.Maybe
-import Data.Text.Encoding              (decodeUtf8)
 import Network.Wai
-import Network.Wai.Parse
 import Network.Wai.Handler.Warp
 import Network.HTTP.Types
 import Numbers.Log
@@ -32,91 +31,59 @@ import Numbers.Conduit
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.Whisper       as W
 
-data ContentType = Json | Html | Text
-
 sinkHttp :: Int -> Int -> Maybe Int -> Maybe (IO EventSink)
 sinkHttp res step = fmap $ \port -> do
     w <- W.newWhisper res step
-
     async (run port $ liftIO . serve w) >>= link
-
-    infoL $ "Serving /overview and /numbersd/<key> on http://0.0.0.0:" <&& port
-
+    infoL $ "Serving /numbersd and /numbersd/render/<key> on http://0.0.0.0:" <&& port
     runSink . awaitForever $ \e -> case e of
         Aggregate p ts -> liftIO $ W.insert ts p w
         _              -> return ()
 
-
--- | serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
+-- | Serves whispers as if served by graphite http://graphite.wikidot.com/url-api-reference
 serve :: W.Whisper -> Request -> IO Response
-serve whis req
-    | isNothing a = return unacceptable
-    | otherwise   = case pathInfo req of
-        ["numbersd"]      -> series b whis (getTargets req)
-        ["overview"]      -> return $ overview b []
-        _                 -> return $ unknown b
-  where
-    a = getType req
-    b = fromJust a
+serve whis req = case pathInfo req of
+    ["numbersd"]           -> return index
+    ["numbersd", "render"] -> series whis $ getTargets req
+    ["javascripts.js"]     -> return javascripts
+    _                      -> return unknown
 
-series :: ContentType -> W.Whisper -> Maybe [Key] -> IO Response
-series typ whis mks = do
-    ts <- currentTime
-    response typ status200 `liftM` f ts ts whis mks
-  where
-    f = case typ of
-        Json -> W.json
-        _    -> W.text
+series :: W.Whisper -> Maybe [Key] -> IO Response
+series whis mks = do
+    now <- currentTime
+    success "text/plain" <$> W.raw now now whis mks
 
 getTargets :: Request -> Maybe [Key]
-getTargets =
-  (\xs -> if null xs then Nothing else Just xs) . catMaybes . map target . queryString
+getTargets = maybeParams target
   where
-    target :: QueryItem -> Maybe Key
     target ("target", Just x) = Just $ Key x
-    target _ = Nothing
+    target _                  = Nothing
 
-getType :: Request -> Maybe ContentType
-getType req = listToMaybe $ catMaybes [getTypeFromParam req, getTypeFromHeader req, Just Text]
-
-getTypeFromParam :: Request -> Maybe ContentType
-getTypeFromParam = listToMaybe . catMaybes . map format . queryString
+maybeParams :: (QueryItem -> Maybe a) -> Request -> Maybe [a]
+maybeParams f = g . catMaybes . map f . queryString
   where
-    format :: QueryItem -> Maybe ContentType
-    format ("format", Just "json") = Just Json
-    format ("format", Just "html") = Just Text
-    format ("format", Just "text") = Just Text
-    format _ = Nothing
+    g [] = Nothing
+    g xs = Just xs
 
-getTypeFromHeader :: Request -> Maybe ContentType
-getTypeFromHeader req = hAccept `lookup` requestHeaders req >>= f . parseHttpAccept
-  where
-    f h | p Json h  = return Json
-        | p Html h  = return Text
-        | p Text h  = return Text
-        | otherwise = Nothing
-    p t = (pack t `elem`)
+success :: BS.ByteString -> Builder -> Response
+success = response status200
 
-unacceptable :: Response
-unacceptable = response Text status406 $ copyByteString "Not Acceptable"
+unknown :: Response
+unknown = response status404 "text/plain" $ copyByteString "Error: Not Found"
 
-unknown :: ContentType -> Response
-unknown typ = response typ status404 $ copyByteString msg
-  where
-    msg = case typ of
-        Json -> "{\"error\": \"Not Found\"}"
-        _    -> "Not Found"
+response :: Status -> BS.ByteString -> Builder -> Response
+response status content = ResponseBuilder status
+    [ ("Content-Type", content)
+    , ("Access-Control-Allow-Origin", "*")
+    ]
 
-overview :: ContentType -> [(Key, Int)] -> Response
-overview typ = response typ status200 . body
-  where
-    body = copyLazyByteString . encode . object . map f
-    f (Key k, v) = decodeUtf8 k .= v
+index :: Response
+index = file "text/html" $(embedFile "assets/index.html")
+{-# NOINLINE index #-}
 
-response :: ContentType -> Status -> Builder -> Response
-response typ status = ResponseBuilder status [("Content-Type", pack typ)]
+javascripts :: Response
+javascripts = file "application/javascript" $(embedFile "assets/javascripts.js")
+{-# NOINLINE javascripts #-}
 
-pack :: ContentType -> BS.ByteString
-pack Json = "application/json"
-pack Html = "text/html"
-pack Text = "text/plain"
+file :: BS.ByteString -> BS.ByteString -> Response
+file content body = success content $! copyByteString body

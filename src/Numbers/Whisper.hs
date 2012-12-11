@@ -17,19 +17,14 @@ module Numbers.Whisper (
 
     -- * Operations
     , insert
-
-    -- * Formatters
-    , json
-    , text
+    , raw
     ) where
 
-import Blaze.ByteString.Builder        (Builder, copyLazyByteString)
+import Blaze.ByteString.Builder        (Builder)
 import Control.Applicative             ((<$>))
 import Control.Arrow                   (second)
 import Control.Monad                   (liftM)
-import Data.Aeson               hiding (json)
 import Data.Maybe
-import Data.Text.Encoding              (decodeUtf8)
 import Numbers.Types
 import Numbers.Whisper.Series          (Resolution, Series, Step)
 
@@ -52,17 +47,8 @@ insert :: Time -> Point -> Whisper -> IO ()
 insert ts (P k v) Whisper{..} =
     M.update k (maybe (S.create _res _step ts v) (S.update ts v)) _db
 
-json :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
-json from to w mks =
-    (copyLazyByteString . encode . map f) `liftM` fetch from to w mks
-  where
-    f (Key k, s) = object [
-        "target" .= decodeUtf8 k
-      , "datapoints" .= toJSON (map (\(t, v) -> (v, t)) $ S.datapoints s)
-      ]
-
-text :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
-text from to w mks = (build . map f) `liftM` fetch from to w mks
+raw :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
+raw from to w mks = (build . map f) `liftM` fetch from to w mks
   where
     f (Key k, s) = k &&> "," &&& s &&> "\n"
 

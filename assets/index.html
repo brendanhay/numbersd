@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>numbersd</title>
+    <style type="text/css">
+      
+    </style>
+    <script src="javascripts.js"></script>
+  </head>
+  <body>
+    <script type="application/javascript">
+      var context = cubism.context()
+        .serverDelay(10 * 1000) // allow 15 seconds of collection lag
+        .step(1000)
+        .size(300);
+
+      var graphite = context.graphite("http://localhost:8126/numbersd");
+
+      var api_metrics = [
+        graphite.metric("counters.num_stats"),
+        graphite.metric("counters.comely"),
+        graphite.metric("counters.comely.count"),
+        graphite.metric("gauges.bucolic"),
+        graphite.metric("timers.elixir.count")
+      ];
+
+      var horizon = context.horizon()
+        .colors(["#08519c", "#*82bd", "#6baed6", "#fee6ce", "#fdae6b", "#e6550d" ])
+        .height(100);
+
+      d3.select("body").selectAll(".axis")
+        .data(["top", "bottom"])
+      .enter().append("div").attr("class", "fluid-row")
+        .attr("class", function(d) { return d + " axis"; })
+        .each(function(d) { d3.select(this).call(context.axis().ticks(10).orient(d)); });
+
+      d3.select("body").append("div")
+        .attr("class", "rule")
+        .call(context.rule());
+
+      d3.select("body").selectAll(".horizon")
+        .data(api_metrics)
+      .enter().insert("div", ".bottom")
+        .attr("class", "horizon").call(horizon.extent([-1000, 1000]));
+
+      context.on("focus", function(i) {
+        d3.selectAll(".value").style("right", i == null ? null : context.size() - 1 - i + "px");
+      });
+
+    </script>
+  </body>
+</html>
