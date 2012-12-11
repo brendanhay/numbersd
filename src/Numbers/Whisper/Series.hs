@@ -34,7 +34,6 @@ module Numbers.Whisper.Series (
     , update
     ) where
 
-import Data.Aeson
 import Data.List
 import Data.Maybe
 import Numbers.Types
@@ -86,9 +85,6 @@ instance Loggable Series where
 
 noneStr :: String
 noneStr = "None"
-
-instance ToJSON Interval where
-    toJSON (I i) = toJSON i
 
 create :: Resolution -> Step -> Time -> Double -> Series
 create r s ts val
