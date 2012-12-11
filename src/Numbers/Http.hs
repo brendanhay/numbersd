@@ -61,4 +61,7 @@ unknown :: Response
 unknown = response status404 $ copyByteString "Error: Not Found"
 
 response :: Status -> Builder -> Response
-response status = ResponseBuilder status [("Content-Type", "text/plain")]
+response status = ResponseBuilder status
+    [ ("Content-Type", "text/plain")
+    , ("Access-Control-Allow-Origin", "*")
+    ]
