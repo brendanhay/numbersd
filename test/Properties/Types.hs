@@ -166,10 +166,10 @@ instance Arbitrary EncodeUri where
     arbitrary = do
         SafeStr ih  <- arbitrary
         Positive ip <- arbitrary
-        iu          <- elements [ File $ BS.pack ih
-                                , Tcp (BS.pack ih) ip
-                                , Udp (BS.pack ih) ip
-                                ]
+        iu <- elements [ File $ BS.pack ih
+                       , Tcp (BS.pack ih) ip
+                       , Udp (BS.pack ih) ip
+                       ]
         let r  = toByteString $ build iu
             ou = fromMaybe (File "failed!") $ decode uriParser r
         return EncodeUri

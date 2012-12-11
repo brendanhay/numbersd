@@ -28,6 +28,8 @@ import Test.QuickCheck
 
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Set              as S
+import qualified Data.Vector           as V
 
 conduitProperties :: Test
 conduitProperties = testGroup "sinks"
@@ -47,6 +49,7 @@ conduitProperties = testGroup "sinks"
         [ testGroup "flush event"
             [ testProperty "encodes key" prop_downstream_flush_event_encodes_key
             , testProperty "aggregates values" prop_downstream_flush_event_aggregates_values
+            , testProperty "encodes multiple values per line" prop_downstream_flush_event_encodes_mvalues_per_line
             ]
         , testProperty "ignores non flush events" prop_downstream_ignores_non_flush_events
         ]
@@ -89,6 +92,14 @@ prop_downstream_flush_event_encodes_key d =
 prop_downstream_flush_event_aggregates_values :: Downstream -> Bool
 prop_downstream_flush_event_aggregates_values d =
     inputDMetric d `kindaCloseM` outputDMetric d
+
+prop_downstream_flush_event_encodes_mvalues_per_line :: Downstream -> Bool
+prop_downstream_flush_event_encodes_mvalues_per_line d =
+    len (inputDMetric d) == ':' `BS.count` inputDEncoded d
+  where
+    len (Timer vs) = V.length vs
+    len (Set   vs) = S.size vs
+    len _          = 1
 
 prop_downstream_ignores_non_flush_events :: Property
 prop_downstream_ignores_non_flush_events =
