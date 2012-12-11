@@ -17,5 +17,7 @@ Procfile
 *.aux*
 *.ps*
 *.hp*
+*.tar
+*.gz
 TAGS
 tags
