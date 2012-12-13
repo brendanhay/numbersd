@@ -2,7 +2,7 @@
 
 require "socket"
 
-WORDS = %w{brood bucolic bungalow chatoyant conflate cynosure demure denouement desuetude elixir  ephemeral epiphany}
+WORDS = %w{bucolic bungalow conflate cynosure denouement desuetude ephemeral epiphany}
 TYPES = %w{c g ms s}
 HOST  = "127.0.0.1"
 PORT  = 8125
@@ -18,10 +18,10 @@ module Math
 end
 
 def send(sock, val)
-  sample = 1
   key  = WORDS.sample
   type = TYPES.sample
-  rate = "|@#{sample}" unless sample == 1
+  samp = [0.1, 0.5, nil].sample
+  rate = "|@#{samp}" if samp
   msg  = "#{key}:#{val}|#{type}#{rate}"
   puts msg
   sock.send(msg, 0, HOST, PORT)
@@ -32,17 +32,19 @@ numbers = Enumerator.new do |gen|
   i = 0
   loop do
     i = i + 0.2
-    val = Math.max(-100, Math.min(1000, val + 0.8 * rand - 0.4 + 0.2 * Math.cos(i)))
+    val = Math.max(0, Math.min(1000, val + 0.8 * rand - 0.4 + 0.2 * Math.cos(i)))
     gen.yield val
   end
 end
 
 @sock = UDPSocket.new
 
+SAMPLE = []
+
 while true do
   (1..10).to_a.sample.times do
     send(@sock, numbers.next())
   end
 
-  sleep 0.5
+  sleep 1
 end
