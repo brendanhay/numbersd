@@ -13,6 +13,7 @@
 module Numbers.Map.Internal (
     -- * Exported Types
       Entry(..)
+    , Update(..)
 
     -- * Opaque
     , Map
@@ -44,6 +45,9 @@ data Entry v = Entry {
 
 type Map k v = TVar (M.Map k (Entry v))
 
+data Update = New | Existing
+  deriving (Eq, Show)
+
 empty :: MonadIO m => m (Map k v)
 empty = atomic $ newTVar M.empty
 
@@ -58,15 +62,15 @@ lookup key tm = do
   m <- M.lookup key `atomicRead` tm
   return $ value <$> m
 
-update :: (MonadIO m, Ord k) => k -> (Maybe v -> v) -> Map k v -> m (Entry v)
+update :: (MonadIO m, Ord k) => k -> (Maybe v -> v) -> Map k v -> m Update
 update key f tm = do
   now <- liftIO currentTime
   atomic $! do
     me <- M.lookup key <$> readTVar tm
     let val = f $ fmap value me
-        e' = maybe (Entry now now val) (\e -> e{modify = now, value = val}) me
+        (u, e') = maybe (New, Entry now now val) (\e -> (Existing, e{modify = now, value = val})) me
     modifyTVar' tm $ M.insert key e'
-    return e'
+    return u
 
 deleteIf :: (MonadIO m, Ord k) => (Entry v -> Bool) -> k -> Map k v -> m (Maybe (Entry v))
 deleteIf f key tm = atomic $! do

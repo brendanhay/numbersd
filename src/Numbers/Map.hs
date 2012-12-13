@@ -60,10 +60,10 @@ lookup key = I.lookup key . _imap
 
 update :: (MonadIO m, Ord k) => k -> (Maybe v -> v) -> Map k v -> m ()
 update key f Map{..} = do
-  e <- I.update key f _imap
-  if I.create e == I.modify e
-    then scheduleSweep key _policy _imap
-    else return ()
+  u <- I.update key f _imap
+  case u of
+    I.New -> scheduleSweep key _policy _imap
+    I.Existing -> return ()
 
 scheduleSweep :: (MonadIO m, Ord k) => k -> Policy k v -> I.Map k v -> m ()
 scheduleSweep _ NoPolicy _ = return ()
