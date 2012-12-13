@@ -1,18 +1,23 @@
 name:                 numbersd
 version:              0.1.0
 synopsis:             Port of statsd to Haskell
+description:          Port of statsd to Haskell
 license:              OtherLicense
 license-file:         LICENSE
-author:               Brendan Hay <brendan@soundcloud.com>
-maintainer:           Brendan Hay <brendan@soundcloud.com>
-homepage:             http://github.com/brendanhay/numbersd
-bug-reports:          http://github.com/brendanhay/numbersd/issues
 category:             Metrics, Monitoring
 stability:            Experimental
 build-type:           Simple
 cabal-version:        >= 1.10
-description: .
+
+author:               Brendan Hay <brendan.g.hay@gmail.com>
+maintainer:           Brendan Hay <brendan.g.hay@gmail.com>
+homepage:             http://github.com/brendanhay/numbersd
+bug-reports:          http://github.com/brendanhay/numbersd/issues
+
 extra-source-files:   README.md
+data-files:           assets/numbersd.html
+                    , assets/numbersd.js
+                    , assets/numbersd.css
 
 source-repository head
   type:               git
@@ -21,16 +26,19 @@ source-repository head
 executable numbersd
   main-is:            Main.hs
   hs-source-dirs:     src
+
   default-language:   Haskell2010
   default-extensions: FlexibleInstances
                     , GeneralizedNewtypeDeriving
                     , OverloadedStrings
                     , RecordWildCards
                     , TypeSynonymInstances
+
   ghc-options:       -Wall -O2 -rtsopts -threaded
   ghc-prof-options:  -Wall -prof -fprof-auto -auto-all -with-rtsopts=-hc
 
   build-depends:      base > 4 && < 5
+                    , aeson
                     , async
                     , attoparsec
                     , blaze-builder
@@ -41,7 +49,6 @@ executable numbersd
                     , data-lens
                     , data-lens-template
                     , fast-logger
-                    , file-embed
                     , http-types
                     , monad-control
                     , network
@@ -55,15 +62,17 @@ executable numbersd
                     , text
                     , time
                     , transformers
+                    , unordered-containers
                     , vector
                     , wai
-                    , wai-extra
+                    , wai-app-static
                     , warp
 
 test-suite numbersd-properties
   type:               exitcode-stdio-1.0
   main-is:            Properties.hs
   hs-source-dirs:     src, test
+
   default-language:   Haskell2010
   default-extensions: FlexibleInstances
                     , GeneralizedNewtypeDeriving
@@ -98,7 +107,6 @@ test-suite numbersd-properties
                     , transformers
                     , vector
                     , wai
-                    , wai-extra
                     , warp
                     , test-framework
                     , test-framework-quickcheck2

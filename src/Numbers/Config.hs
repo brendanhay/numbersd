@@ -20,7 +20,8 @@ module Numbers.Config (
     , parseConfig
     ) where
 
-import Control.Monad                   (when)
+import Control.Monad
+import Data.Aeson
 import Data.Lens.Common
 import Data.Lens.Template
 import Data.List                       (intersect)
@@ -70,6 +71,22 @@ instance Loggable Config where
         ]
     build _ = mempty
 
+instance ToJSON Config where
+    toJSON Config{..} = object
+        [ "listeners"   .= _listeners
+        , "http_port"   .= _httpPort
+        , "buffer_size" .= _buffer
+        , "resolution"  .= _resolution
+        , "interval"    .= _interval
+        , "percentiles" .= _percentiles
+        , "log_events"  .= _logEvents
+        , "prefix"      .= _prefix
+        , "graphites"   .= _graphites
+        , "broadcasts"  .= _broadcasts
+        , "downstreams" .= _downstreams
+        ]
+    toJSON _ = Null
+
 defaultConfig :: Config
 defaultConfig = Config
     { _listeners    = [Udp (BS.pack "0.0.0.0") 8125]
@@ -91,7 +108,7 @@ parseConfig = do
     n <- getProgName
     case processValue (flags n) a of
         Help    -> print (helpText [] HelpFormatOne $ flags n) >> exitSuccess
-        Version -> print (info n) >> exitSuccess
+        Version -> putStrLn (info n) >> exitSuccess
         c       -> validate c >> infoL c >> return c
 
 info :: String -> String
@@ -99,7 +116,7 @@ info name = concat
     [ name
     , " version "
     , showVersion version
-    , " (C) Brendan Hay <brendan@soundcloud.com> 2012"
+    , " (C) Brendan Hay <brendan.g.hay@gmail.com> 2012"
     ]
 
 validate :: Config -> IO ()

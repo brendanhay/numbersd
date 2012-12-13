@@ -19,5 +19,9 @@ Procfile
 *.hp*
 *.tar
 *.gz
+*.tmp
 TAGS
 tags
+yuicompressor-*
+numbersd.js
+numbersd.css

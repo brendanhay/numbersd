@@ -34,7 +34,6 @@ import Numbers.Types            hiding (P)
 
 import qualified Numbers.Map.Internal as I
 
-
 type Handler k v = k -> v -> Time -> IO ()
 
 data Policy k v = Reset Int (Handler k v)

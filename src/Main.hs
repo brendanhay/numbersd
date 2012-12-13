@@ -26,7 +26,7 @@ import Numbers.Store
 
 main :: IO ()
 main = withSocketsDo $ do
-    Config{..} <- parseConfig
+    conf@Config{..} <- parseConfig
 
     buf <- atomically $ newTBQueue _buffer
     infoL "Buffering..."
@@ -35,9 +35,7 @@ main = withSocketsDo $ do
     infoL "Listeners started..."
 
     ss  <- sequence $
-        catMaybes [ sinkHttp _resolution _interval _httpPort
-                  , sinkLog _logEvents
-                  ]
+        catMaybes [sinkHttp conf, sinkLog _logEvents]
         ++ map (newSink (graphite _prefix)) _graphites
         ++ map (newSink broadcast) _broadcasts
         ++ map (newSink downstream) _downstreams

@@ -17,10 +17,10 @@ module Numbers.Whisper (
 
     -- * Operations
     , insert
-    , raw
+    , fetch
+    , keys
     ) where
 
-import Blaze.ByteString.Builder        (Builder)
 import Control.Applicative             ((<$>))
 import Control.Arrow                   (second)
 import Control.Monad                   (liftM)
@@ -37,7 +37,7 @@ data Whisper = Whisper
     , _db    :: M.Map Key Series
     }
 
-newWhisper :: Int -> Int -> IO Whisper
+newWhisper :: Resolution -> Step -> IO Whisper
 newWhisper res step = do
     db <- M.empty $ M.Reset res (\_ _ _ -> return ())
     return $! Whisper (res `div` step) step db
@@ -46,11 +46,6 @@ newWhisper res step = do
 insert :: Time -> Point -> Whisper -> IO ()
 insert ts (P k v) Whisper{..} =
     M.update k (maybe (S.create _res _step ts v) (S.update ts v)) _db
-
-raw :: Time -> Time -> Whisper -> Maybe [Key] -> IO Builder
-raw from to w mks = (build . map f) `liftM` fetch from to w mks
-  where
-    f (Key k, s) = k &&> "," &&& s &&> "\n"
 
 fetch :: Time -> Time -> Whisper -> Maybe [Key] -> IO [(Key, Series)]
 fetch from to Whisper{..}  mks = map (second (S.fetch from to)) `liftM`
@@ -62,3 +57,6 @@ fetch from to Whisper{..}  mks = map (second (S.fetch from to)) `liftM`
     f k = do
       mv <- M.lookup k _db
       return $ (\v -> (k, v)) <$> mv
+
+keys :: Whisper -> IO [Key]
+keys = M.keys . _db

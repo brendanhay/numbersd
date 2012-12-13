@@ -34,8 +34,10 @@ module Numbers.Whisper.Series (
     , update
     ) where
 
+import Data.Aeson
 import Data.List
 import Data.Maybe
+import Data.Tuple    (swap)
 import Numbers.Types
 
 type Resolution = Int
@@ -47,12 +49,24 @@ newtype Interval = I Int
 toInterval :: Step -> Time -> Interval
 toInterval s (Time t) = I $ t - (t `mod` s)
 
+instance ToJSON Interval where
+    toJSON (I i) = toJSON i
+
+instance ToJSON (Interval, Maybe Double) where
+    toJSON = toJSON . swap
+
 data Series = SS
     { res    :: Resolution
     , step   :: Step
     , end    :: Interval
     , points :: [Maybe Double]
     } deriving (Eq, Show)
+
+instance ToJSON (Key, Series) where
+    toJSON (k, ss) = object
+        [ "target"     .= k
+        , "datapoints" .= datapoints ss
+        ]
 
 maxResolution :: Resolution
 maxResolution = 5 * 60

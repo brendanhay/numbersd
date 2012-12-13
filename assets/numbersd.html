@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>numbersd</title>
+    <link href="numbersd.css" rel="stylesheet" type="text/css">
+    <script src="numbersd.js" type="text/javascript"></script>
+  </head>
+  <body>
+
+    <div class="navbar navbar-inverse navbar-static-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="/numbersd">numbersd</a>
+            <ul class="nav">
+              <li class="active"><a href="#counters" data-toggle="tab">Counters</a></li>
+              <li><a href="#gauges" data-toggle="tab">Gauges</a></li>
+              <li><a href="#timers" data-toggle="tab">Timers</a></li>
+              <li><a href="#sets" data-toggle="tab">Sets</a></li>
+              <li><a href="#configuration" data-toggle="tab">Configuration</a></li>
+            </ul>
+          </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="container">
+      <div class="tab-content">
+
+        <div class="tab-pane active main" id="counters">
+        </div>
+
+        <div class="tab-pane" id="gauges">
+        </div>
+
+        <div class="tab-pane" id="timers">
+        </div>
+
+        <div class="tab-pane" id="sets">
+        </div>
+
+        <div class="tab-pane" id="configuration">
+
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th class="key">Key</th>
+                <th class="flag">Flag</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Listeners</td>
+                <td><code>--listeners</code></td>
+                <td id="listeners"></td>
+              </tr>
+              <tr>
+                <td>Http Port</td>
+                <td><code>--http</code></td>
+                <td id="http_port"></td>
+              </tr>
+              <tr>
+                <td>Buffer Size</td>
+                <td><code>--buffer</code></td>
+                <td id="buffer_size"></td>
+              </tr>
+              <tr>
+                <td>Resolution</td>
+                <td><code>--resolution</code></td>
+                <td id="resolution"></td>
+              </tr>
+              <tr>
+                <td>Interval</td>
+                <td><code>--interval</code></td>
+                <td id="interval"></td>
+              </tr>
+              <tr>
+                <td>Percentiles</td>
+                <td><code>--percentiles</code></td>
+                <td id="percentiles"></td>
+              </tr>
+              <tr>
+                <td>Log Events</td>
+                <td><code>--events</code></td>
+                <td id="log_events"></td>
+              </tr>
+              <tr>
+                <td>Prefix</td>
+                <td><code>--prefix</code></td>
+                <td id="prefix"></td>
+              </tr>
+              <tr>
+                <td>Graphites</td>
+                <td><code>--grapihtes</code></td>
+                <td id="graphites"></td>
+              </tr>
+              <tr>
+                <td>Broadcasters</td>
+                <td><code>--broadcasts</code></td>
+                <td id="broadcasters"></td>
+              </tr>
+              <tr>
+                <td>Downstreams</td>
+                <td><code>--downstreams</code></td>
+                <td id="downstreams"></td>
+              </tr>
+            </tbody>
+          </table>
+
+        </div>
+
+      </div>
+    </div>
+
+    <script type="application/javascript">
+
+      var url      = "http://localhost:8126/numbersd",
+          auth     = "",
+          padnulls = false,
+          period   = 3,    // Minutes
+          refresh  = 1000; // Microseconds
+
+      // Get all this shit from /numbersd/config
+
+      var config   = {};
+      var metrics  = [];
+      var keyRegex = /^(counters|gauges|timers|sets)\.(.+)$/;
+
+      function splitMetrics(list) {
+          var result = {
+              "counters": [],
+              "gauges":   [],
+              "timers":   [],
+              "sets":     []
+          };
+
+          $.each(list, function(index, key) {
+              var match = keyRegex.exec(key);
+
+              if (match) {
+                  result[match[1]].push({
+                      "target": key,
+                      "alias":  match[2]
+                  });
+              }
+          });
+
+          return result;
+      }
+
+      $.get("http://localhost:8126/numbersd/config?format=json", function(config) {
+          config = JSON.parse(config);
+
+          $.each(config, function(id, val) {
+              var elem = $("#" + id);
+
+              if (typeof val === "number" || typeof val == "string") {
+                  elem.html($("<code>" + val + "</code>"));
+              } else if ($.isArray(val) && val.length > 0) {
+                  elem.html($("<code>" + val.join("</code> <code>") + "</code>"));
+              }
+          });
+
+          a = splitMetrics(config.metrics);
+
+          metrics = a.counters.concat(a.gauges).concat(a.timers).concat(a.sets);
+
+          $.getScript("javascripts/tasseo.js");
+      });
+
+      $("a[data-toggle='tab']").on("show", function (evt) {
+          var name = $(evt.target).attr("href").substring(1);
+          console.log(name);
+      });
+
+    </script>
+
+  </body>
+</html>

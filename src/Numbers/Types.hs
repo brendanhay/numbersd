@@ -37,6 +37,7 @@ import Blaze.ByteString.Builder
 import Control.Arrow                     ((***), first)
 import Control.Applicative        hiding (empty)
 import Control.Monad
+import Data.Aeson                        (ToJSON(..))
 import Data.Attoparsec.ByteString
 import Data.List                  hiding (sort)
 import Data.Maybe
@@ -51,6 +52,7 @@ import Text.Regex.PCRE            hiding (match)
 import qualified Data.Attoparsec.Char8 as PC
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Set              as S
+import qualified Data.Text.Encoding    as TE
 import qualified Data.Vector           as V
 
 class Loggable a where
@@ -129,6 +131,9 @@ instance Read Uri where
 instance IsString Uri where
     fromString = fromJust . decode uriParser . BS.pack
 
+instance ToJSON Uri where
+    toJSON = toJSON . TE.decodeUtf8 . toByteString . build
+
 decode :: Parser a -> BS.ByteString -> Maybe a
 decode p bstr = maybeResult $ feed (parse p bstr) BS.empty
 
@@ -169,6 +174,9 @@ instance Loggable [Key] where
     build = mconcat . intersperse s . map build
       where
         s = sbuild ","
+
+instance ToJSON Key where
+    toJSON (Key k) = toJSON k
 
 keyParser :: Parser Key
 keyParser = do

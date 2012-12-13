@@ -107,7 +107,7 @@ An example monitoring workflow I've observed in production, looks something like
 
 <a name="figure-1" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/statsd-monitoring.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/images/statsd-monitoring.png" />
 </p>
 **Figure 1**
 
@@ -129,7 +129,7 @@ two between the application and Nagios:
 
 <a name="figure-2" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/numbersd-monitoring.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/images/numbersd-monitoring.png" />
 </p>
 **Figure 2**
 
@@ -147,7 +147,7 @@ and monitoring, two separate single point of failures have been removed from the
 
 <a name="figure-3" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/numbersd-graphites.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/images/numbersd-graphites.png" />
 </p>
 **Figure 3**
 
@@ -158,7 +158,7 @@ Multiple Graphites
 
 <a name="figure-4" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/numbersd-downstreams.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/images/numbersd-downstreams.png" />
 </p>
 **Figure 4**
 
@@ -169,7 +169,7 @@ A conceited federation heirarchy
 
 <a name="figure-5" />
 <p align="center">
-  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/numbersd-broadcasters.png" />
+  <img src="https://raw.github.com/brendanhay/numbersd/master/assets/images/numbersd-broadcasters.png" />
 </p>
 **Figure 5**
 
