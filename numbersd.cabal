@@ -15,9 +15,6 @@ homepage:             http://github.com/brendanhay/numbersd
 bug-reports:          http://github.com/brendanhay/numbersd/issues
 
 extra-source-files:   README.md
-data-files:           assets/numbersd.html
-                    , assets/numbersd.js
-                    , assets/numbersd.css
 
 source-repository head
   type:               git
