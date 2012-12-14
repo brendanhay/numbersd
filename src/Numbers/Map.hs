@@ -45,7 +45,7 @@ data Map k v = Map
     , _imap   :: I.Map k v
     }
 
-empty :: Policy k v -> MonadIO m => m (Map k v)
+empty :: MonadIO m => Policy k v -> m (Map k v)
 empty p = Map p `liftM` I.empty
 
 toList :: MonadIO m => Map k v -> m [(k, v)]
