@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+
 -- |
 -- Module      : Numbers.Http
 -- Copyright   : (c) 2012 Brendan Hay <brendan@soundcloud.com>

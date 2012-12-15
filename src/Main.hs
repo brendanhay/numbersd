@@ -41,7 +41,7 @@ main = withSocketsDo $ do
         ++ map (newSink downstream) _downstreams
     infoL "Sinks started..."
 
-    sto <- asyncLink $ storeSink _percentiles _interval ss buf
+    sto <- asyncLink $ runStore _percentiles _interval ss buf
     infoL "Store started..."
 
     void . waitAnyCancel $ sto:ls

@@ -30,7 +30,6 @@ module Numbers.Conduit (
 
     -- * Sources
     , sourceUri
-    , sourceQueue
 
     -- * Sinks
     , sinkUri

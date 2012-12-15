@@ -11,28 +11,26 @@
 --
 
 module Numbers.Store (
-      storeSink
+      runStore
     ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent.STM
-import Data.Conduit             hiding (Flush)
 import Numbers.Conduit
 import Numbers.Types
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Numbers.Map           as M
 
-storeSink :: [Int]
-          -> Int
-          -> [EventSink]
-          -> TBQueue BS.ByteString
-          -> IO ()
-storeSink qs n sinks q = runResourceT $ sourceQueue q $$ bracketP
-    (liftIO . M.empty $ M.Continue n f)
-    (\_ -> return ())
-    (\m -> awaitForever $ liftIO . parse sinks m)
+runStore :: [Int]
+         -> Int
+         -> [EventSink]
+         -> TBQueue BS.ByteString
+         -> IO ()
+runStore qs n sinks q = do
+    m <- liftIO . M.empty $ M.Continue n f
+    forever $ atomically (readTBQueue q) >>= liftIO . parse sinks m
   where
     f k m ts = mapM_ (\p -> pushEvents sinks [Flush k m ts, Aggregate p ts])
         $! calculate qs n k m
