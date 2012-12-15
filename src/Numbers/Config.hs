@@ -91,7 +91,7 @@ defaultConfig :: Config
 defaultConfig = Config
     { _listeners    = [Udp (BS.pack "0.0.0.0") 8125]
     , _httpPort     = Nothing
-    , _buffer       = 2048
+    , _buffer       = 12
     , _interval     = 10
     , _resolution   = 60
     , _percentiles  = [90]
