@@ -49,7 +49,7 @@ executable numbersd
                     , http-types
                     , monad-control
                     , network
-                    , network-conduit < 0.6.2
+                    , network-conduit < 0.6.2 || > 0.6.2
                     , regex-pcre
                     , simple-sendfile < 0.2.9
                     , split
@@ -93,7 +93,7 @@ test-suite numbersd-properties
                     , http-types
                     , monad-control
                     , network
-                    , network-conduit < 0.6.2
+                    , network-conduit < 0.6.2 || > 0.6.2
                     , regex-pcre
                     , simple-sendfile < 0.2.9
                     , split
