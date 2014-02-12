@@ -119,7 +119,7 @@ An example monitoring workflow I've observed in production, looks something like
 There are 4 actors involved in [Figure 1](#figure-1): the Application, Network, Aggregator, Graphite, and Nagios.
 
 For monitoring to be (remotely) reliable we have to make some assumptions .. so in this case lets' remove
-the Network (assume realible UDP transmission) and Nagios (13 year old software always works) from the equation.
+the Network (assume reliable UDP transmission) and Nagios (13 year old software always works) from the equation.
 
 If either the aggregator, or Graphite is temporarily unavailable the NPRE check local to the application will
 fail and potentially raise a warning/critical alert.
